@@ -1,2 +1,2 @@
 # NHLr
-Repositorio para códigos e progamas em R
+Repositorio para analise de dados e visualizações em R
