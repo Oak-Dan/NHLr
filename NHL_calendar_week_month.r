@@ -20,7 +20,7 @@ TEXT_COLOR_AWAY <- "black"
 TEXT_COLOR_DEFAULT <- "black"
 
 # Funcoes auxiliares
-baixar_e_converter_svg <- function(url, png_path, width = 500, height = 500) {
+baixar_e_converter_svg <- function(url, png_path, width = 1000, height = 1000) {
   temp_svg <- tempfile(fileext = ".svg")
   GET(url, write_disk(temp_svg, overwrite = TRUE))
   rsvg_png(temp_svg, png_path, width = width, height = height)
@@ -158,7 +158,7 @@ criar_calendario_jogos <- function(ano, mes, jogos) {
 }
 
 # Funcao para processar os jogos da semana (visao semanal)
-processar_jogos_semana <- function(jogos, data_inicio) {
+processar_jogos_semana <- function(jogos, data_inicio, team_colors) {
   data_inicio <- data_inicio - days(wday(data_inicio) - 2)
   data_fim <- data_inicio + days(6)
 
@@ -175,8 +175,8 @@ processar_jogos_semana <- function(jogos, data_inicio) {
       jogo = paste(awayTeam.abbrev, "at", homeTeam.abbrev),
       logo_away = awayTeam.logo,
       logo_home = homeTeam.logo,
-      cor_away = "#F47A38",
-      cor_home = "#C8102E"
+      cor_away = team_colors$cor_secundaria[match(awayTeam.abbrev, team_colors$nome_abreviado)],
+      cor_home = team_colors$cor_primaria[match(homeTeam.abbrev, team_colors$nome_abreviado)],
     ) %>%
     select(
       id, gameDate, dia_semana, hora, jogo, logo_away, logo_home,
@@ -216,26 +216,26 @@ criar_programacao_semanal <- function(jogos_semana) {
   )
 
   ggplot(jogos_semana, aes(x = dia_semana, y = jogo_index)) +
-    geom_tile(aes(width = 0.91, height = 0.71),
+    geom_tile(aes(width = 0.85, height = 0.65),
       fill = "#eee8d5",
-      color = "black", linewidth = 0.25
+      color = "lightgray", linewidth = 0.20
     ) +
     geom_rect(
       aes(
-        xmin = as.numeric(dia_semana) - 0.45,
-        xmax = as.numeric(dia_semana) - 0.038,
-        ymin = jogo_index - 0.35,
-        ymax = jogo_index + 0.35,
+        xmin = as.numeric(dia_semana) - 0.42,
+        xmax = as.numeric(dia_semana) - 0.035,
+        ymin = jogo_index - 0.32,
+        ymax = jogo_index + 0.32,
         fill = cor_away
       ),
       color = NA
     ) +
     geom_rect(
       aes(
-        xmin = as.numeric(dia_semana) + 0.038,
-        xmax = as.numeric(dia_semana) + 0.45,
-        ymin = jogo_index - 0.35,
-        ymax = jogo_index + 0.35,
+        xmin = as.numeric(dia_semana) + 0.035,
+        xmax = as.numeric(dia_semana) + 0.42,
+        ymin = jogo_index - 0.32,
+        ymax = jogo_index + 0.32,
         fill = cor_home
       ),
       color = NA
@@ -244,8 +244,8 @@ criar_programacao_semanal <- function(jogos_semana) {
       size = 2.5, vjust = 0.5,
       family = "Roboto Slab SemiBold"
     ) +
-    geom_image(aes(image = logo_away), size = 0.06, nudge_x = -0.25) +
-    geom_image(aes(image = logo_home), size = 0.06, nudge_x = 0.25) +
+    geom_image(aes(image = logo_away), size = 0.045, nudge_x = -0.22) +
+    geom_image(aes(image = logo_home), size = 0.045, nudge_x = 0.22) +
     scale_fill_identity() +
     scale_x_discrete(expand = c(0.01, 0.01)) +
     scale_y_continuous(
@@ -265,7 +265,7 @@ criar_programacao_semanal <- function(jogos_semana) {
       plot.title = element_text(hjust = 0.5, face = "bold"),
       axis.text.x = element_text(angle = 0, hjust = 0.5, face = "bold"),
       axis.text.y = element_text(size = 8),
-      panel.grid.major = element_line(color = "lightgray", linewidth = 0.5),
+      panel.grid.major = element_line(color = "lightgray", linewidth = 0.25),
       panel.grid.minor = element_blank(),
     ) +
     coord_flip()
@@ -274,45 +274,46 @@ criar_programacao_semanal <- function(jogos_semana) {
 # Funcao principal
 main <- function() {
   # Carregar dados
-  nhl_schedule <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/data/NHL_Schedule.RDS")
+  nhl_schedule <- readRDS("C:/Users/danilo.carvalho/Documents/Python Scripts/nhl_schedule.RDS")
+  team_colors <- readRDS("C:/Users/danilo.carvalho/Documents/Python Scripts/nhl_teamcolors.RDS")
 
 
   # Visualizacao mensal para um time especifico
-  nhl_schedule_mes_stl <- nhl_schedule %>%
-    filter(
-      (homeTeam.abbrev == TEAM_ABBREV | awayTeam.abbrev == TEAM_ABBREV),
-      gameDate >= as.Date("2024-10-01"),
-      gameDate < as.Date("2024-11-01")
-    ) %>%
-    processar_jogos(TEAM_ABBREV)
+  #nhl_schedule_mes_stl <- nhl_schedule %>%
+  #  filter(
+  #    (homeTeam.abbrev == TEAM_ABBREV | awayTeam.abbrev == TEAM_ABBREV),
+  #    gameDate >= as.Date("2024-10-01"),
+  #    gameDate < as.Date("2024-11-01")
+  #  ) %>%
+  #  processar_jogos(TEAM_ABBREV)
 
   # Baixar e converter logos para visao mensal
-  nhl_schedule_mes_stl$logo_png <- sapply(
-    seq_len(nrow(nhl_schedule_mes_stl)),
-    function(i) {
-      png_path <- file.path(tempdir(), paste0("logo_", i, ".png"))
-      baixar_e_converter_svg(nhl_schedule_mes_stl$logo_url[i], png_path)
-    }
-  )
+  #nhl_schedule_mes_stl$logo_png <- sapply(
+  #  seq_len(nrow(nhl_schedule_mes_stl)),
+  #  function(i) {
+  #    png_path <- file.path(tempdir(), paste0("logo_", i, ".png"))
+  #    baixar_e_converter_svg(nhl_schedule_mes_stl$logo_url[i], png_path)
+  #  }
+  #)
 
   # Criar e salvar o calendario mensal
-  calendario <- criar_calendario_jogos(2024, 10, nhl_schedule_mes_stl)
-  plot_schedule <- ggdraw(calendario) +
-    theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
+  #calendario <- criar_calendario_jogos(2024, 10, nhl_schedule_mes_stl)
+  #plot_schedule <- ggdraw(calendario) +
+  #  theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
 
-  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png",
-    plot_schedule,
-    width = 6, height = 6, dpi = 300
-  )
+  #ggsave("C:/Users/danilo.carvalho/Documents/Python Scripts/calendario_mensal.png",
+  #  plot_schedule,
+  #  width = 6, height = 6, dpi = 300
+  #)
 
   # Visao semanal para todos os times
-  data_inicio_semana <- as.Date("2024-10-14")
-  jogos_semana <- processar_jogos_semana(nhl_schedule, data_inicio_semana)
+  data_inicio_semana <- as.Date("2024-10-24")
+  jogos_semana <- processar_jogos_semana(nhl_schedule, data_inicio_semana, team_colors)
 
   # Criar e salvar o grafico semanal
   programacao_semanal <- criar_programacao_semanal(jogos_semana)
 
-  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/programacao_semanal.png",
+  ggsave("C:/Users/danilo.carvalho/Documents/Python Scripts/programacao_semanal.png",
     programacao_semanal,
     width = 10, height = 8, dpi = 300
   )
