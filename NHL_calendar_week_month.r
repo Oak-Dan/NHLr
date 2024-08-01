@@ -9,6 +9,7 @@ library(httr)
 library(cowplot)
 library(extrafont)
 library(tidyr)
+library(ggchicklet)
 
 # Configuracoess globais
 TEAM_ABBREV <- "STL"
@@ -159,6 +160,7 @@ criar_calendario_jogos <- function(ano, mes, jogos) {
 
 # Funcao para processar os jogos da semana (visao semanal)
 processar_jogos_semana <- function(jogos, data_inicio, team_colors) {
+  
   data_inicio <- data_inicio - days(wday(data_inicio) - 2)
   data_fim <- data_inicio + days(6)
 
@@ -216,11 +218,11 @@ criar_programacao_semanal <- function(jogos_semana) {
   )
 
   ggplot(jogos_semana, aes(x = dia_semana, y = jogo_index)) +
-    geom_tile(aes(width = 0.85, height = 0.65),
-      fill = "#eee8d5",
-      color = "lightgray", linewidth = 0.20
-    ) +
-    geom_rect(
+    #geom_tile(aes(width = 0.85, height = 0.65),
+    #  fill = "#eee8d5",
+    #  color = "lightgray", linewidth = 0.20
+    #) +
+    ggchicklet:::geom_rrect(
       aes(
         xmin = as.numeric(dia_semana) - 0.42,
         xmax = as.numeric(dia_semana) - 0.035,
@@ -228,9 +230,10 @@ criar_programacao_semanal <- function(jogos_semana) {
         ymax = jogo_index + 0.32,
         fill = cor_away
       ),
+      r = unit(0.20, 'npc'),
       color = NA
     ) +
-    geom_rect(
+    ggchicklet:::geom_rrect(
       aes(
         xmin = as.numeric(dia_semana) + 0.035,
         xmax = as.numeric(dia_semana) + 0.42,
@@ -238,6 +241,7 @@ criar_programacao_semanal <- function(jogos_semana) {
         ymax = jogo_index + 0.32,
         fill = cor_home
       ),
+      r = unit(0.20, 'npc'),
       color = NA
     ) +
     geom_text(aes(label = hora),
@@ -307,7 +311,7 @@ main <- function() {
   #)
 
   # Visao semanal para todos os times
-  data_inicio_semana <- as.Date("2024-10-24")
+  data_inicio_semana <- as.Date("2024-11-04")
   jogos_semana <- processar_jogos_semana(nhl_schedule, data_inicio_semana, team_colors)
 
   # Criar e salvar o grafico semanal
