@@ -1,26 +1,24 @@
-# Bibliotecas necessarias
-library(tidyverse)
-library(ggplot2)
-library(lubridate)
-library(dplyr)
-library(rsvg)
-library(ggimage)
-library(httr)
-library(cowplot)
-library(extrafont)
-library(tidyr)
-library(ggchicklet)
-library(grid)
-library(png)
+# Bibliotecas necessarias. Suprimir mensagens
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(ggplot2)
+  library(lubridate)
+  library(dplyr)
+  library(rsvg)
+  library(ggimage)
+  library(httr)
+  library(cowplot)
+  library(extrafont)
+  library(tidyr)
+  library(ggchicklet)
+  library(grid)
+  library(png)
+  library(magick)
+})
 
 # Configuracoess globais
-TEAM_ABBREV <- "STL"
-BACKGROUND_COLOR <- "#eee8d5"
-HOME_COLOR <- "#00539B"
-AWAY_COLOR <- "#FFFFFF"
-TEXT_COLOR_HOME <- "white"
-TEXT_COLOR_AWAY <- "black"
-TEXT_COLOR_DEFAULT <- "black"
+BACKGROUND_COLOR <- "#eee8d5" # nolint
+TEXT_COLOR_DEFAULT <- "black" # nolint
 
 
 # Funcoes auxiliares
@@ -61,39 +59,77 @@ processar_jogos <- function(jogos, team_abbrev) {
         awayTeam_logo_light,
         homeTeam_logo_light
       ),
-      horario = sub("^.*T([0-9]{2}:[0-9]{2}).*$", "\\1", startTimeBR_v2),
-      local = if_else(homeTeam.abbrev == team_abbrev, "Casa", "Fora")
+      horario = sub(
+        "^.*T([0-9]{2}:[0-9]{2}).*$", "\\1",
+        startTimeBR_v2
+      ),
+      local = if_else(homeTeam.abbrev == team_abbrev,
+        "Casa",
+        "Fora"
+      )
     ) %>%
-    select(id, data, adversario, time_abreviado, logo_url, horario, local)
+    select(
+      id, data, adversario, time_abreviado,
+      logo_url,
+      horario,
+      local
+    )
 }
 
 # Funcao para preparar os dados do calendario (visao mensal)
-preparar_dados_calendario <- function(ano, mes, jogos) {
-  inicio_mes <- as.Date(paste(ano, mes, "01", sep = "-"))
-  fim_mes <- ceiling_date(inicio_mes, "month") - days(1)
-  todos_dias <- seq(inicio_mes, fim_mes, by = "day")
+preparar_dados_calendario <- function(
+    ano, mes, jogos,
+    home_color, away_color, text_color_home,
+    text_color_away) {
+  inicio_mes <- as.Date(paste(ano,
+    mes,
+    "01",
+    sep = "-"
+  ))
+  fim_mes <- ceiling_date(
+    inicio_mes,
+    "month"
+  ) - days(1)
+  todos_dias <- seq(inicio_mes,
+    fim_mes,
+    by = "day"
+  )
 
-  dias_semana_pt <- c("Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom")
+  dias_semana_pt <- c(
+    "Seg", "Ter",
+    "Qua", "Qui",
+    "Sex", "Sab",
+    "Dom"
+  )
 
   calendario <- data.frame(
     data = todos_dias,
     dia = day(todos_dias),
-    dia_semana = factor(dias_semana_pt[wday(todos_dias, week_start = 1)],
+    dia_semana = factor(
+      dias_semana_pt[wday(todos_dias,
+        week_start = 1
+      )],
       levels = dias_semana_pt
     )
   ) %>%
     left_join(jogos, by = "data") %>%
     mutate(
       semana = as.numeric(format(data, "%W")) -
-        as.numeric(format(as.Date(paste(ano, mes, "01", sep = "-")), "%W")) + 1,
+        as.numeric(format(
+          as.Date(paste(ano, mes,
+            "01",
+            sep = "-"
+          )),
+          "%W"
+        )) + 1,
       cor_fundo = case_when(
-        local == "Casa" ~ HOME_COLOR,
-        local == "Fora" ~ AWAY_COLOR,
+        local == "Casa" ~ home_color,
+        local == "Fora" ~ away_color,
         TRUE ~ BACKGROUND_COLOR
       ),
       cor_texto = case_when(
-        local == "Casa" ~ TEXT_COLOR_HOME,
-        local == "Fora" ~ TEXT_COLOR_AWAY,
+        local == "Casa" ~ text_color_home,
+        local == "Fora" ~ text_color_away,
         TRUE ~ TEXT_COLOR_DEFAULT
       )
     )
@@ -102,8 +138,15 @@ preparar_dados_calendario <- function(ano, mes, jogos) {
 }
 
 # Funcao principal para criar o calendario mensal
-criar_calendario_jogos <- function(ano, mes, jogos, logo_png_team) {
-  calendario <- preparar_dados_calendario(ano, mes, jogos)
+criar_calendario_jogos <- function(
+    ano, mes, jogos, logo_png_team,
+    team_abbrev, home_color, away_color, text_color_home,
+    text_color_away) {
+  calendario <- preparar_dados_calendario(
+    ano, mes, jogos,
+    home_color, away_color, text_color_home,
+    text_color_away
+  )
 
   meses_pt <- c(
     "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
@@ -118,8 +161,8 @@ criar_calendario_jogos <- function(ano, mes, jogos, logo_png_team) {
     x = c(2, 2.8),
     y = 1,
     label = c("Casa", "Fora"),
-    color = c(HOME_COLOR, AWAY_COLOR),
-    text_color = c(TEXT_COLOR_HOME, TEXT_COLOR_AWAY)
+    color = c(home_color, away_color),
+    text_color = c(text_color_home, text_color_away)
   )
 
 
@@ -133,7 +176,7 @@ criar_calendario_jogos <- function(ano, mes, jogos, logo_png_team) {
     ) +
     geom_image(
       data = subset(calendario, !is.na(logo_png)),
-      aes(image = logo_png), size = 0.11, nudge_y = 0.2
+      aes(image = logo_png), size = 0.125, nudge_y = 0.2
     ) +
     geom_text(
       data = subset(calendario, !is.na(time_abreviado)),
@@ -150,14 +193,22 @@ criar_calendario_jogos <- function(ano, mes, jogos, logo_png_team) {
     scale_color_identity() +
     scale_y_reverse() +
     coord_fixed() +
+    labs(
+      title = paste(
+        "OUTUBRO"
+      ),
+      x = NULL,
+      y = NULL
+    ) +
     theme_danilo() +
     theme(
       legend.position = "none",
-      # plot.title = element_text(
-      #  hjust = 0.5, face = "bold",
-      #  family = "Roboto Slab SemiBold",
-      #  size = 12
-      # ),
+      plot.title = element_text(
+        hjust = 0.5, face = "bold",
+        vjust = 10,
+        family = "Roboto Slab SemiBold",
+        size = 12
+      ),
       axis.text.x = element_text(
         face = "bold",
         family = "Roboto Slab SemiBold"
@@ -169,9 +220,26 @@ criar_calendario_jogos <- function(ano, mes, jogos, logo_png_team) {
 
   # Create the legend plot
   p_legend <- ggplot(legend_data, aes(x = x, y = y)) +
-    geom_tile(aes(fill = color), width = 0.4, height = 0.4) +
+    ggchicklet:::geom_rrect(
+      aes(
+        xmin = 1.75, xmax = 2.05, ymin = 0.9,
+        ymax = 1.1,
+        fill = home_color
+      ),
+      r = unit(0.15, "npc"),
+      color = "black"
+    ) +
+    ggchicklet:::geom_rrect(
+      aes(
+        xmin = 2.55, xmax = 2.85, ymin = 0.9,
+        ymax = 1.1,
+        fill = away_color
+      ),
+      r = unit(0.15, "npc"),
+      color = "black"
+    ) +
     geom_text(aes(label = label, color = "black"),
-      hjust = -0.5, nudge_x = 0.2, size = 3, family = "Roboto Slab SemiBold"
+      hjust = -0.5, nudge_x = 0.01, size = 2.5, family = "Roboto Slab SemiBold"
     ) +
     scale_fill_identity() +
     scale_color_identity() +
@@ -180,41 +248,19 @@ criar_calendario_jogos <- function(ano, mes, jogos, logo_png_team) {
     theme_void() +
     theme(plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"))
 
-  # Combine the plots using plot_grid
-  combined_plot <- plot_grid(
-    p_legend, p_calendar,
-    ncol = 1,
-    rel_heights = c(0.05, 1),
-    align = "v"
+
+  # Save our inset plot
+  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/p_legend.png", # nolint
+    p_legend,
+    w = 3.85, h = 1.25, dpi = 300
   )
 
   set_null_device("png")
 
-  # Add the title and team logo
-  final_plot <- ggdraw() +
-    draw_label(
-      paste0("Jogos - ", TEAM_ABBREV, " ", nome_mes, " ", ano),
-      fontface = "bold",
-      size = 12,
-      y = 0.97,
-      x = 0.5,
-      hjust = 0.5
-    ) +
-    draw_plot(combined_plot, y = -0.025, height = 0.97) +
-    draw_image(img, x = 0.40, y = 0.42, scale = .22) +
-    theme(
-      plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA)
-    )
 
-  return(final_plot)
-
-
-  # p <- ggdraw(p) +
-  #  draw_image(img,  x = 0.40, y = 0.41, scale = .22) + # inserindo logo
-  #  theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
-
-
-  # return(p)
+  ggdraw(p_calendar) +
+    draw_image(img, x = 0.40, y = 0.42, scale = .25) + # inserindo logo
+    theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
 }
 
 # Funcao para processar os jogos da semana (visao semanal)
@@ -346,68 +392,93 @@ criar_programacao_semanal <- function(jogos_semana) {
 }
 
 # Funcao principal
-main <- function() {
+main <- function(team_abbrev) {
   # Carregar dados
-  nhl_schedule <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/data/nhl_schedule.RDS")
-  team_colors <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/data/nhl_teamcolors.RDS")
+  nhl_schedule <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/data/nhl_schedule.RDS") # nolint
+  team_colors <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/data/nhl_teamcolors.RDS") # nolint
 
+  team_color <- team_colors %>%
+    filter(nome_abreviado == team_abbrev) %>%
+    select(
+      cor_primaria, cor_secundaria,
+      text_color_home, text_color_away
+    )
+
+  HOME_COLOR <- team_color$cor_primaria
+  AWAY_COLOR <- team_color$cor_secundaria
+  TEXT_COLOR_HOME <- team_color$text_color_home
+  TEXT_COLOR_AWAY <- team_color$text_color_away
 
   # Visualizacao mensal para um time especifico
-  nhl_schedule_mes_stl <- nhl_schedule %>%
+  nhl_schedule_mes_team <- nhl_schedule %>%
     filter(
-      (homeTeam.abbrev == TEAM_ABBREV | awayTeam.abbrev == TEAM_ABBREV),
+      (homeTeam.abbrev == team_abbrev | awayTeam.abbrev == team_abbrev),
       gameDate >= as.Date("2024-10-01"),
       gameDate < as.Date("2024-11-01")
     ) %>%
-    processar_jogos(TEAM_ABBREV)
+    processar_jogos(team_abbrev)
 
   # Baixar e converter logos para visao mensal
-  nhl_schedule_mes_stl$logo_png <- sapply(
-    seq_len(nrow(nhl_schedule_mes_stl)),
+  nhl_schedule_mes_team$logo_png <- sapply(
+    seq_len(nrow(nhl_schedule_mes_team)),
     function(i) {
       png_path <- file.path(tempdir(), paste0("logo_", i, ".png"))
-      baixar_e_converter_svg(nhl_schedule_mes_stl$logo_url[i], png_path)
+      baixar_e_converter_svg(nhl_schedule_mes_team$logo_url[i], png_path)
     }
   )
 
-  team_logo_abbrev_url <- "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/Logos/Logos Light/STL_light.png"
-
-
-
+  team_logo_abbrev_url <- paste0(
+    "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/Logos/Logos Light/", # nolint
+    team_abbrev,
+    "_light.png"
+  )
   # Criar e salvar o calendario mensal
   calendario <- criar_calendario_jogos(
     2024, 10,
-    nhl_schedule_mes_stl, team_logo_abbrev_url
+    nhl_schedule_mes_team, team_logo_abbrev_url,
+    team_abbrev, HOME_COLOR, AWAY_COLOR, TEXT_COLOR_HOME,
+    TEXT_COLOR_AWAY
   )
   plot_schedule <- ggdraw(calendario) +
     theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
 
-  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png",
+  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png", # nolint
     plot_schedule,
     width = 6, height = 6, dpi = 300
   )
 
+  # Read in Inset plot
+  inset <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/p_legend.png") # nolint
+
+  # Read in Comet plot
+  graf <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
+
+  # Juntar imagens
+  image_composite(graf, inset, offset = "+355+50") %>%
+    image_write("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
+
+
+
   # Visao semanal para todos os times
-  data_inicio_semana <- as.Date("2024-11-22")
-  jogos_semana <- processar_jogos_semana(
-    nhl_schedule,
-    data_inicio_semana, team_colors
-  )
+  # data_inicio_semana <- as.Date("2024-11-22")
+  # jogos_semana <- processar_jogos_semana(
+  #  nhl_schedule,
+  #  data_inicio_semana, team_colors
+  # )
 
   # Criar e salvar o grafico semanal
-  programacao_semanal <- criar_programacao_semanal(jogos_semana)
+  # programacao_semanal <- criar_programacao_semanal(jogos_semana)
 
-  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/programacao_semanal.png",
-    programacao_semanal,
-    width = 10, height = 8, dpi = 300
-  )
+  # ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/programacao_semanal.png", # nolint
+  #       programacao_semanal,
+  #       width = 10, height = 8, dpi = 300
+  # )
 }
 
 # Executar o script
-main()
+args <- commandArgs(trailingOnly = TRUE)
 
-
-
-
-# baixar_e_converter_svg("https://assets.nhle.com/logos/nhl/svg/NJD_light.svg",
-#                       paste0("C:/Users/danilo.carvalho/Documents/Python Scripts/teste.png"))
+if (length(args) == 0) {
+  stop("Por favor, forne<U+00E7>a a abrevia<U+00E7><U+00E3>o do time como argumento.")
+}
+main(args[1])
