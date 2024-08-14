@@ -439,46 +439,44 @@ main <- function(team_abbrev) {
     team_abbrev, HOME_COLOR, AWAY_COLOR, TEXT_COLOR_HOME,
     TEXT_COLOR_AWAY
   )
-  plot_schedule <- ggdraw(calendario) +
-    theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
+  # plot_schedule <- ggdraw(calendario) +
+  #  theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
 
-  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png", # nolint
-    plot_schedule,
-    width = 6, height = 6, dpi = 300
-  )
+  # ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png", # nolint
+  #  plot_schedule,
+  #  width = 6, height = 6, dpi = 300
+  # )
 
   # Read in Inset plot
-  inset <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/p_legend.png") # nolint
+  # inset <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/p_legend.png") # nolint
 
   # Read in Comet plot
-  graf <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
+  # graf <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
 
   # Juntar imagens
-  image_composite(graf, inset, offset = "+355+50") %>%
-    image_write("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
-
-
+  # image_composite(graf, inset, offset = "+355+50") %>%
+  #  image_write("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
 
   # Visao semanal para todos os times
-  # data_inicio_semana <- as.Date("2024-11-22")
-  # jogos_semana <- processar_jogos_semana(
-  #  nhl_schedule,
-  #  data_inicio_semana, team_colors
-  # )
+  data_inicio_semana <- as.Date("2024-11-22")
+  jogos_semana <- processar_jogos_semana(
+    nhl_schedule,
+    data_inicio_semana, team_colors
+  )
 
   # Criar e salvar o grafico semanal
-  # programacao_semanal <- criar_programacao_semanal(jogos_semana)
+  programacao_semanal <- criar_programacao_semanal(jogos_semana)
 
-  # ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/programacao_semanal.png", # nolint
-  #       programacao_semanal,
-  #       width = 10, height = 8, dpi = 300
-  # )
+  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/programacao_semanal.png", # nolint
+    programacao_semanal,
+    width = 10, height = 8, dpi = 300
+  )
 }
 
 # Executar o script
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) == 0) {
-  stop("Por favor, forne<U+00E7>a a abrevia<U+00E7><U+00E3>o do time como argumento.")
+  stop("Por favor, fornecaa a abreviacao do time como argumento.")
 }
 main(args[1])
