@@ -16,6 +16,9 @@ suppressPackageStartupMessages({
   library(magick)
 })
 
+# font_import()
+# loadfonts()
+
 # Configuracoess globais
 BACKGROUND_COLOR <- "#eee8d5" # nolint
 TEXT_COLOR_DEFAULT <- "black" # nolint
@@ -31,7 +34,7 @@ baixar_e_converter_svg <- function(url, png_path, width = 1000, height = 1000) {
 }
 
 theme_danilo <- function() {
-  theme_minimal(base_size = 10, base_family = "Roboto Slab SemiBold") %+replace%
+  theme_minimal(base_size = 10, base_family = "Oswald SemiBold") %+replace%
     theme(
       panel.grid.minor = element_blank(),
       panel.grid.major = element_blank(),
@@ -172,7 +175,7 @@ criar_calendario_jogos <- function(
     geom_text(
       aes(label = dia, color = cor_texto),
       size = 3, vjust = 1,
-      nudge_x = -0.40, nudge_y = 0.45, family = "Roboto Slab SemiBold"
+      nudge_x = -0.40, nudge_y = 0.45, family = "Oswald SemiBold"
     ) +
     geom_image(
       data = subset(calendario, !is.na(logo_png)),
@@ -182,13 +185,13 @@ criar_calendario_jogos <- function(
       data = subset(calendario, !is.na(time_abreviado)),
       aes(label = time_abreviado, color = cor_texto), size = 3.5,
       vjust = 1.2, nudge_y = -0.15,
-      family = "Roboto Slab SemiBold"
+      family = "Oswald SemiBold"
     ) +
     geom_text(
       data = subset(calendario, !is.na(horario)),
       aes(label = horario, color = cor_texto), size = 2.5,
       vjust = 1.2, nudge_y = -0.3,
-      family = "Roboto Slab SemiBold"
+      family = "Oswald SemiBold"
     ) +
     scale_color_identity() +
     scale_y_reverse() +
@@ -206,12 +209,12 @@ criar_calendario_jogos <- function(
       plot.title = element_text(
         hjust = 0.5, face = "bold",
         vjust = 10,
-        family = "Roboto Slab SemiBold",
+        family = "Oswald SemiBold",
         size = 12
       ),
       axis.text.x = element_text(
         face = "bold",
-        family = "Roboto Slab SemiBold"
+        family = "Oswald SemiBold"
       ),
       axis.text.y = element_blank(),
       axis.title = element_blank(),
@@ -239,7 +242,7 @@ criar_calendario_jogos <- function(
       color = "black"
     ) +
     geom_text(aes(label = label, color = "black"),
-      hjust = -0.5, nudge_x = 0.01, size = 2.5, family = "Roboto Slab SemiBold"
+      hjust = -0.5, nudge_x = 0.01, size = 2.5, family = "Oswald SemiBold"
     ) +
     scale_fill_identity() +
     scale_color_identity() +
@@ -264,15 +267,15 @@ criar_calendario_jogos <- function(
 }
 
 # Funcao para processar os jogos da semana (visao semanal)
-processar_jogos_semana <- function(jogos, data_inicio, team_colors) {
-  data_inicio <- data_inicio - days(wday(data_inicio) - 2)
-  data_fim <- data_inicio + days(6)
+processar_jogos_semana <- function(jogos, week_number, team_colors) {
+  # data_inicio <- data_inicio - days(wday(data_inicio) - 2)
+  # data_fim <- data_inicio + days(6)
 
 
   dias_semana_pt <- c("Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom")
 
   jogos %>%
-    filter(gameDate >= data_inicio, gameDate <= data_fim) %>%
+    filter(week == week_number) %>% # data_inicio, gameDate <= data_fim) %>%
     mutate(
       dia_semana = factor(dias_semana_pt[wday(gameDate, week_start = 1)],
         levels = dias_semana_pt
@@ -297,7 +300,7 @@ processar_jogos_semana <- function(jogos, data_inicio, team_colors) {
       )],
     ) %>%
     select(
-      id, gameDate, dia_semana, hora, jogo, logo_away, logo_home,
+      id, gameDate, week, dia_semana, hora, jogo, logo_away, logo_home,
       cor_away, cor_home
     )
 }
@@ -305,7 +308,7 @@ processar_jogos_semana <- function(jogos, data_inicio, team_colors) {
 # Funcao para criar o grafico da programacao semanal
 criar_programacao_semanal <- function(jogos_semana) {
   # Certifique-se de que gameDate esta no formato de data
-  jogos_semana$gameDate <- as.Date(jogos_semana$gameDate)
+  # jogos_semana$gameDate <- as.Date(jogos_semana$gameDate)
 
   # Converta a hora para formato POSIXct para ordenado
   jogos_semana$hora_ordenada <- as.POSIXct(
@@ -323,9 +326,41 @@ criar_programacao_semanal <- function(jogos_semana) {
     mutate(jogo_index = row_number()) %>%
     ungroup()
 
-  # Encontre a data de inicio e fim da semana
-  data_inicio <- min(jogos_semana$gameDate)
-  data_fim <- max(jogos_semana$gameDate)
+  # Encontre a data de in<U+00ED>cio e fim da semana
+  data_inicio <- min(as.Date(jogos_semana$gameDate), na.rm = TRUE)
+  data_fim <- max(as.Date(jogos_semana$gameDate), na.rm = TRUE)
+
+  if (is.finite(data_inicio) && is.finite(data_fim)) {
+    meses_pt <- c(
+      "janeiro", "fevereiro", "marco",
+      "abril", "maio", "junho", "julho", "agosto",
+      "setembro", "outubro", "novembro", "dezembro"
+    )
+
+    # Formatar a data de in<U+00ED>cio apenas com o dia
+    data_inicio_pt <- format(data_inicio, "%d")
+
+    # Formatar a data de fim com dia, m<U+00EA>s e ano
+    data_fim_pt <- format(data_fim, "%d de %B de %Y")
+
+    # Substituir o nome do m<U+00EA>s em ingles pelo equivalente em portugues
+    for (i in 1:12) {
+      data_fim_pt <- sub(month.name[i], meses_pt[i],
+        data_fim_pt,
+        ignore.case = TRUE
+      )
+    }
+
+    titulo <- paste(
+      "Jogos da NHL: Semana", unique(jogos_semana$week),
+      "-", data_inicio_pt, "ate", data_fim_pt
+    )
+  } else {
+    titulo <- paste("Jogos da NHL: Semana", unique(jogos_semana$week))
+  }
+
+
+
 
   # Crie um fator para os dias da semana na ordem correta
   dias_semana_ordem <- c("Dom", "Sab", "Sex", "Qui", "Qua", "Ter", "Seg")
@@ -362,10 +397,10 @@ criar_programacao_semanal <- function(jogos_semana) {
     ) +
     geom_text(aes(label = hora),
       size = 2.5, vjust = 0.5,
-      family = "Roboto Slab SemiBold"
+      family = "Oswald SemiBold"
     ) +
-    geom_image(aes(image = logo_away), size = 0.045, nudge_x = -0.225) +
-    geom_image(aes(image = logo_home), size = 0.045, nudge_x = 0.225) +
+    geom_image(aes(image = logo_away), size = 0.048, nudge_x = -0.225) +
+    geom_image(aes(image = logo_home), size = 0.048, nudge_x = 0.225) +
     scale_fill_identity() +
     scale_x_discrete(expand = c(0.01, 0.01)) +
     scale_y_continuous(
@@ -373,10 +408,7 @@ criar_programacao_semanal <- function(jogos_semana) {
       expand = c(0.01, 0.01)
     ) +
     labs(
-      title = paste(
-        "NHL Games:", format(data_inicio, "%B %d"),
-        "ate", format(data_fim, "%B %d, %Y")
-      ),
+      title = titulo,
       x = NULL,
       y = NULL
     ) +
@@ -392,7 +424,7 @@ criar_programacao_semanal <- function(jogos_semana) {
 }
 
 # Funcao principal
-main <- function(team_abbrev) {
+main <- function(team_abbrev, week_number = NULL) {
   # Carregar dados
   nhl_schedule <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/data/nhl_schedule.RDS") # nolint
   team_colors <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/data/nhl_teamcolors.RDS") # nolint
@@ -439,44 +471,56 @@ main <- function(team_abbrev) {
     team_abbrev, HOME_COLOR, AWAY_COLOR, TEXT_COLOR_HOME,
     TEXT_COLOR_AWAY
   )
-  # plot_schedule <- ggdraw(calendario) +
-  #  theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
+  plot_schedule <- ggdraw(calendario) +
+    theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
 
-  # ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png", # nolint
-  #  plot_schedule,
-  #  width = 6, height = 6, dpi = 300
-  # )
+  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png", # nolint
+    plot_schedule,
+    width = 6, height = 6, dpi = 300
+  )
 
   # Read in Inset plot
-  # inset <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/p_legend.png") # nolint
+  inset <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/p_legend.png") # nolint
 
   # Read in Comet plot
-  # graf <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
+  graf <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
 
   # Juntar imagens
-  # image_composite(graf, inset, offset = "+355+50") %>%
-  #  image_write("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
+  image_composite(graf, inset, offset = "+355+50") %>%
+    image_write("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
 
   # Visao semanal para todos os times
-  data_inicio_semana <- as.Date("2024-11-22")
-  jogos_semana <- processar_jogos_semana(
-    nhl_schedule,
-    data_inicio_semana, team_colors
-  )
+  if (!is.null(week_number)) {
+    print(paste("Generating schedule for week:", week_number))
+    jogos_semana <- processar_jogos_semana(
+      nhl_schedule,
+      week_number, team_colors
+    )
 
-  # Criar e salvar o grafico semanal
-  programacao_semanal <- criar_programacao_semanal(jogos_semana)
+    # Criar e salvar o grafico semanal
+    programacao_semanal <- criar_programacao_semanal(jogos_semana)
 
-  ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/programacao_semanal.png", # nolint
-    programacao_semanal,
-    width = 10, height = 8, dpi = 300
-  )
+    ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/programacao_semanal.png", # nolint
+      programacao_semanal,
+      width = 10, height = 8, dpi = 300
+    )
+  }
 }
 
 # Executar o script
+# Pegar argumentos da linha de comando
 args <- commandArgs(trailingOnly = TRUE)
 
-if (length(args) == 0) {
-  stop("Por favor, fornecaa a abreviacao do time como argumento.")
+# Verificar se pelo menos o team_abbrev foi fornecido
+if (length(args) < 1) {
+  stop("Usage: Rscript nhl_calendar.R <team_abbrev> [week_number]")
 }
-main(args[1])
+
+# Pegar team_abbrev
+team_abbrev <- args[1]
+
+# Pegar week_number se fornecido
+week_number <- if (length(args) >= 2) as.numeric(args[2]) else NULL
+
+# Chamar a fun<U+00E7><U+00E3>o main
+main(team_abbrev, week_number)
