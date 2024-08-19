@@ -1,7 +1,7 @@
 library(httr)
 library(jsonlite)
 library(dplyr)
-
+library(prismatic)
 
 # Load the schedule data
 teams_sched <- readRDS("C:/Users/danilo.carvalho/Documents/Python Scripts/Outros/nhl_schedule.RDS")
@@ -95,3 +95,130 @@ for (player_id in player_ids) {
 
 
 #saveRDS(all_players_df, "C:/Users/danilo.carvalho/Documents/Python Scripts/Outros/player_info.RDS")
+
+
+
+# Custom theme
+theme_owen <- function () { 
+  theme_minimal(base_size=9, base_family="Consolas") %+replace% 
+    theme(
+      panel.grid.minor = element_blank(),
+      plot.background = element_rect(fill = 'floralwhite', color = "floralwhite")
+    )
+}
+
+
+library(tidyverse)
+
+aaa <- all_players_df %>%
+  group_by(current_team) %>%
+  summarise(mean_height = mean(height_cm, na.rm = TRUE),
+            mean_weight = mean(weight_kg, na.rm = TRUE)) %>%
+  ungroup()
+
+# Calculate league averages
+aaa$league_height_average <- mean(all_players_df$height_cm, na.rm = TRUE)
+aaa$league_weight_average <- mean(all_players_df$weight_kg, na.rm = TRUE)
+
+
+aaa$zscore <- (aaa$mean_height - mean(all_players_df$height_cm))/var(all_players_df$height_cm)
+
+
+height_df <- aaa |> 
+  select(current_team, mean_height, league_height_average, zscore) |> 
+  rename(mean_measure = mean_height,
+         league_average = league_height_average)
+
+height_df$measure <- "Height"
+
+height_df$avg_zscore <- mean
+
+weight_df <- aaa |> 
+  select(current_team, mean_weight, league_weight_average) |> 
+  rename(mean_measure = mean_weight,
+         league_average = league_weight_average)
+
+weight_df$zscore <- (aaa$mean_weight - mean(all_players_df$weight_kg))/var(all_players_df$weight_kg)
+
+weight_df$measure <- "Weight"
+
+
+measures_teams_nhl <- bind_rows(height_df, weight_df)
+
+
+
+# convert foul type to factor
+measures_teams_nhl$measure <- as.factor(measures_teams_nhl$measure)
+
+# order factor levels
+measures_teams_nhl$measure <- factor(measures_teams_nhl$measure, levels = c("Height", "Weight")) 
+
+
+# order legend
+legendOrder <- c("Height", "Weight")
+
+measures_teams_nhl$current_team_Duplicates <- measures_teams_nhl$current_team
+
+
+
+# Plot the data
+measures_teams_nhl %>%
+  ggplot(aes(x = zscore, y = measure)) +
+  # jitter background points
+  geom_jitter(data = mutate(measures_teams_nhl, current_team = NULL), 
+              aes(group = current_team_Duplicates), 
+              height = 0.05, 
+              size = 1, 
+              color = 'gray80', 
+              alpha = .25) +
+  # make mini multiples, sort by avg z-score
+  facet_wrap(~fct_reorder(current_team, current_team), 
+             nrow = 8, 
+             strip.position = 'top') +
+  # add vertical line at 0
+  geom_vline(xintercept = 0, 
+             linetype = 'dashed', 
+             size = .5, 
+             color = 'gray50') +
+  # add point for each referee
+  geom_jitter(aes(group = current_team, 
+                  fill = measure, 
+                  color = after_scale(clr_darken(fill, 0.3))), 
+              height = 0.05, 
+              size = 1.5, 
+              shape = 21, 
+              alpha = 1) +
+  # add color palette
+  scale_fill_manual(values = c("#00B8AAFF", 
+                               "#FD625EFF"), 
+                    breaks = rev(legendOrder)) +
+  scale_color_manual(values = c("#00B8AAFF", 
+                                "#FD625EFF"))  +
+  # tweak x-axis
+  xlim(-0.15, 0.15) + #scale_x_continuous(breaks = seq(-0.15, 0.05, 0.15)) + 
+  # turn off coord clipping
+  coord_cartesian(clip = 'off') + 
+  theme_owen() +
+  # make theme tweaks
+  theme(plot.title.position = 'plot',
+        plot.title = element_text(face ='bold', size = 13),
+        plot.subtitle = element_text(size = 8),
+        strip.text.x = element_text(size = 6),
+        panel.spacing.x = unit(1, "lines"), 
+        plot.margin = margin(10, 10, 15, 10), 
+        axis.text.x = element_text(size = 5), 
+        axis.title.x = element_text(size = 7), 
+        axis.text.y = element_blank(), 
+        legend.position = 'top',
+        legend.text = element_text(size = 6.5), 
+        legend.margin=margin(0,0,0,0),
+        legend.box.margin=margin(0,-10,-10,-10)) +
+  # tweak legend
+  guides(fill = guide_legend(keyheight = .75)) +
+  labs(fill = "",
+       color = "",
+       x = "Z-Score of Average Height and Weight",
+       y = "",
+       title = "Average Player Height and Weight by Team",
+       subtitle = "Comparing team averages to league-wide average height and weight")
+ 
