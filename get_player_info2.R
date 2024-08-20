@@ -101,7 +101,7 @@ all_players_df <- bind_rows(player_list)
 
 # Custom theme
 theme_owen <- function () { 
-  theme_minimal(base_size=9, base_family="Consolas") %+replace% 
+  theme_minimal(base_size=9, base_family="Oswald SemiBold") %+replace% 
     theme(
       panel.grid.minor = element_blank(),
       plot.background = element_rect(fill = 'floralwhite', color = "floralwhite")
@@ -248,7 +248,7 @@ measures_teams_nhl %>%
   guides(fill = guide_legend(keyheight = .75)) +
   labs(fill = "",
        color = "",
-       x = "Z-Score da Altura e Peso Médios",
+       x = "Z-Score da Altura Peso e Idade",
        y = "",
        title = "Altura, Peso e Idade Média dos Jogadores por Time",
        subtitle = paste0("Comparando as médias dos times com a altura (",
