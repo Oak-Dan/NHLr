@@ -173,11 +173,11 @@ measures_teams_nhl <- bind_rows(list(height_df, weight_df, age_df))
 measures_teams_nhl$measure <- as.factor(measures_teams_nhl$measure)
 
 # order factor levels
-measures_teams_nhl$measure <- factor(measures_teams_nhl$measure, levels = c("Peso", "Altura", "Idade")) 
+measures_teams_nhl$measure <- factor(measures_teams_nhl$measure, levels = c("Idade","Peso", "Altura")) 
 
 
 # order legend
-legendOrder <- c("Peso", "Altura", "Idade")
+legendOrder <- c("Idade", "Peso", "Altura")
 
 measures_teams_nhl$current_team_Duplicates <- measures_teams_nhl$current_team
 
@@ -225,7 +225,7 @@ measures_teams_nhl %>%
                                 "#FD625EFF",
                                 "#625EEF"))  +
   # tweak x-axis
-  #xlim(-0.15, 0.15) + 
+  xlim(-0.12, 0.12) + 
   #scale_x_continuous(limits = c(-0.15, 0.15)) + 
   # turn off coord clipping
   coord_cartesian(clip = 'off') + 
