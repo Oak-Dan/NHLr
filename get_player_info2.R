@@ -94,6 +94,7 @@ for (player_id in player_ids) {
 all_players_df <- bind_rows(player_list)
 
 
+
 #saveRDS(all_players_df, "C:/Users/danilo.carvalho/Documents/Python Scripts/Outros/player_info.RDS")
 
 
@@ -110,15 +111,26 @@ theme_owen <- function () {
 
 library(tidyverse)
 
+# Step 1: Convert birth_date to Date object
+all_players_df$birth_date <- as.Date(all_players_df$birth_date, format="%Y-%m-%d")
+
+# Step 2: Calculate age
+all_players_df$age <- as.numeric(difftime(Sys.Date(), all_players_df$birth_date, units = "weeks")) / 52.25
+
+# Step 3: Round the age to a whole number (optional)
+all_players_df$age <- floor(all_players_df$age)
+
 aaa <- all_players_df %>%
   group_by(current_team) %>%
   summarise(mean_height = mean(height_cm, na.rm = TRUE),
-            mean_weight = mean(weight_kg, na.rm = TRUE)) %>%
+            mean_weight = mean(weight_kg, na.rm = TRUE),
+            mean_age = mean(age, na.rm = TRUE)) %>%
   ungroup()
 
 # Calculate league averages
 aaa$league_height_average <- mean(all_players_df$height_cm, na.rm = TRUE)
 aaa$league_weight_average <- mean(all_players_df$weight_kg, na.rm = TRUE)
+aaa$league_age_average <- mean(all_players_df$age, na.rm = TRUE)
 
 
 aaa$zscore <- (aaa$mean_height - mean(all_players_df$height_cm))/var(all_players_df$height_cm)
@@ -142,8 +154,18 @@ weight_df$zscore <- (aaa$mean_weight - mean(all_players_df$weight_kg))/var(all_p
 
 weight_df$measure <- "Peso"
 
+age_df <- aaa |> 
+  select(current_team, mean_age, league_age_average) |> 
+  rename(mean_measure = mean_age,
+         league_average = league_age_average)
 
-measures_teams_nhl <- bind_rows(height_df, weight_df)
+age_df$zscore <- (aaa$mean_age - mean(all_players_df$age))/var(all_players_df$age)
+
+age_df$measure <- "Idade"
+
+
+
+measures_teams_nhl <- bind_rows(list(height_df, weight_df, age_df))
 
 
 
@@ -151,11 +173,11 @@ measures_teams_nhl <- bind_rows(height_df, weight_df)
 measures_teams_nhl$measure <- as.factor(measures_teams_nhl$measure)
 
 # order factor levels
-measures_teams_nhl$measure <- factor(measures_teams_nhl$measure, levels = c("Peso", "Altura")) 
+measures_teams_nhl$measure <- factor(measures_teams_nhl$measure, levels = c("Peso", "Altura", "Idade")) 
 
 
 # order legend
-legendOrder <- c("Peso", "Altura")
+legendOrder <- c("Peso", "Altura", "Idade")
 
 measures_teams_nhl$current_team_Duplicates <- measures_teams_nhl$current_team
 
@@ -193,16 +215,18 @@ measures_teams_nhl %>%
             vjust = -0.5, # Adjust vertical position
             hjust = 0.5,
             nudge_x = 0.03,# Adjust horizontal position
-            color = "black") +
+            color = 'gray10') +
   # add color palette
   scale_fill_manual(values = c("#00B8AAFF", 
-                               "#FD625EFF"), 
+                               "#FD625EFF",
+                               "#625EEF"), 
                     breaks = rev(legendOrder)) +
   scale_color_manual(values = c("#00B8AAFF", 
-                                "#FD625EFF"))  +
+                                "#FD625EFF",
+                                "#625EEF"))  +
   # tweak x-axis
   #xlim(-0.15, 0.15) + 
-  scale_x_continuous(limits = c(-0.15, 0.15)) + 
+  #scale_x_continuous(limits = c(-0.15, 0.15)) + 
   # turn off coord clipping
   coord_cartesian(clip = 'off') + 
   theme_owen() +
@@ -226,8 +250,9 @@ measures_teams_nhl %>%
        color = "",
        x = "Z-Score da Altura e Peso Médios",
        y = "",
-       title = "Altura e Peso Médios dos Jogadores por Time",
+       title = "Altura, Peso e Idade Média dos Jogadores por Time",
        subtitle = paste0("Comparando as médias dos times com a altura (",
-                         round(height_df$league_average[1],2)," cm) e peso (",
-                         round(weight_df$league_average[1],2)," Kg) médio da liga"))
+                         round(height_df$league_average[1],2)," cm) , peso (",
+                         round(weight_df$league_average[1],2)," kg) e idade (",
+                         round(age_df$league_average[1],2),") média da liga"))
  
