@@ -75,11 +75,12 @@ calculate_additional_goals_for_extra_win <- function(G_s, G_a, total_games, curr
 }
 
 # Calcular o número de gols adicionais necessários para uma vitória extra
-#result <- calculate_additional_goals_for_extra_win(G_s, G_a, total_games, expected_wins)
+result <- calculate_additional_goals_for_extra_win(G_s, G_a, total_games, expected_wins)
 
 #expected_wins
-#result$additional_goals
-#result$new_expected_wins
+result$additional_goals
+result$new_expected_wins
+expected_wins
 
 
 
@@ -301,21 +302,39 @@ PrWin <- function(U, V, Time, Lead, ET, EL, OT, OTType, Calc) {
   return(PrWin)
 }
 
+(1.7*((190-7)/82)/30) + (1.7*((303-4)/82)/30)
 
-U <- 2.499
-V <- 2.225
-Time <- 0
+
+U <- 2.23
+V <- 3.65
+Time <- 0 
 Lead <- 0
-ET <- (1.7/30)
-EL <- (2.7/30)
+ET <- 1.7/30
+EL <- 2.7/30
 OT <- 0.4
 OTType <- 2
-Calc <- 3
+#Calc <- 3
 
 
 # Chamar a função
-prob_win <- PrWin(U, V, Time, Lead, ET, EL, OT, OTType, Calc)
+prob_lose <- PrWin(U, V, Time, Lead, ET, EL, OT, OTType, -1)
+prob_tie <- PrWin(U, V, Time, Lead, ET, EL, OT, OTType, 0)
+prob_win <- PrWin(U, V, Time, Lead, ET, EL, OT, OTType, 1)
+prob_we <- PrWin(U, V, Time, Lead, ET, EL, OT, OTType, 3)
+prob_points <- PrWin(U, V, Time, Lead, ET, EL, OT, OTType, 2)
 
 # Mostrar o resultado
-print(prob_win)
+print(paste0("Probabilidade de perder: ",round(prob_lose,3)))
+print(paste0("Probabilidade de empatar: ",round(prob_tie,3)))
+print(paste0("Probabilidade de ganhar: ",round(prob_win,3)))
+print(paste0("Probabilidade de Vítorias: ",round(prob_we,3)))
+print(paste0("Probabilidade de pontos: ",round(prob_points,3)))
+
+
+
+# Posso dividir em como mandante e como visitante
+# gf_mandante e ga_mandante
+# gf_visitante e ga_visitante
+
+
 
