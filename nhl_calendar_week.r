@@ -20,7 +20,7 @@ suppressPackageStartupMessages({
 # loadfonts()
 
 # Configuracoess globais
-BACKGROUND_COLOR <- "#eee8d5" # nolint
+BACKGROUND_COLOR <- "floralwhite" # nolint
 TEXT_COLOR_DEFAULT <- "black" # nolint
 
 
@@ -66,9 +66,10 @@ processar_jogos <- function(jogos, team_abbrev) {
         "^.*T([0-9]{2}:[0-9]{2}).*$", "\\1",
         startTimeBR_v2
       ),
-      local = if_else(homeTeam.abbrev == team_abbrev,
-        "Casa",
-        "Fora"
+      local = case_when(
+        neutralSite == TRUE ~ "Special",
+        homeTeam.abbrev == team_abbrev ~ "Casa",
+        TRUE ~ "Fora"
       )
     ) %>%
     select(
@@ -128,6 +129,7 @@ preparar_dados_calendario <- function(
       cor_fundo = case_when(
         local == "Casa" ~ home_color,
         local == "Fora" ~ away_color,
+        local == "Special" ~ "white",
         TRUE ~ BACKGROUND_COLOR
       ),
       cor_texto = case_when(
@@ -179,7 +181,7 @@ criar_calendario_jogos <- function(
     ) +
     geom_image(
       data = subset(calendario, !is.na(logo_png)),
-      aes(image = logo_png), size = 0.125, nudge_y = 0.2
+      aes(image = logo_png), size = 0.12, nudge_y = 0.2
     ) +
     geom_text(
       data = subset(calendario, !is.na(time_abreviado)),
@@ -198,7 +200,7 @@ criar_calendario_jogos <- function(
     coord_fixed() +
     labs(
       title = toupper(nome_mes),
-      caption = "All dates and times are in Brasilia Time (BRT, UTC-3) and subject to change.", # nolint
+      caption = "Todas as datas e horarios estao no Horario de Brasilia (BRT, UTC-3) e estao sujeitos a alteracoes.", # nolint
       x = NULL,
       y = NULL
     ) +
@@ -207,13 +209,13 @@ criar_calendario_jogos <- function(
       legend.position = "none",
       plot.title = element_text(
         hjust = 0.5, face = "bold",
-        vjust = 20,
+        vjust = 8,
         family = "Oswald SemiBold",
-        size = 12
+        size = 16
       ),
       plot.caption = element_text(
         size = 8, hjust = 0.02,
-        vjust = -3, color = "black"
+        vjust = -5, color = "black"
       ),
       axis.text.x = element_text(
         face = "bold",
@@ -222,7 +224,7 @@ criar_calendario_jogos <- function(
       ),
       axis.text.y = element_blank(),
       axis.title = element_blank(),
-      plot.margin = margin(t = 0, r = 10, b = 0, l = 10, unit = "pt")
+      plot.margin = margin(t = 10, r = 10, b = 10, l = 10, unit = "pt")
     )
 
   # Create the legend plot
@@ -339,7 +341,7 @@ criar_programacao_semanal <- function(jogos_semana) {
     # Formatar a data de fim com dia, m<U+00EA>s e ano
     data_fim_pt <- format(data_fim, "%d de %B de %Y")
 
-    # Substituir o nome do m<U+00EA>s em ingles pelo equivalente em portugues
+    # Substituir o nome do mes em ingles pelo equivalente em portugues
     for (i in 1:12) {
       data_fim_pt <- sub(month.name[i], meses_pt[i],
         data_fim_pt,
@@ -408,6 +410,7 @@ criar_programacao_semanal <- function(jogos_semana) {
       axis.text.y = element_text(size = 8),
       panel.grid.major = element_line(color = "lightgray", linewidth = 0.25),
       panel.grid.minor = element_blank(),
+      plot.margin = margin(t = 20, r = 20, b = 20, l = 20, unit = "pt")
     ) +
     coord_flip()
 }
@@ -456,7 +459,7 @@ main <- function(team_abbrev, week_number = NULL, ano = NULL, mes = NULL) {
       team_abbrev, "_light.png"
     )
 
-    # Criar e salvar o calend<U+00E1>rio mensal
+    # Criar e salvar o calendario mensal
     calendario <- criar_calendario_jogos(
       ano, mes,
       nhl_schedule_mes, team_logo_abbrev_url, team_abbrev,
@@ -467,7 +470,7 @@ main <- function(team_abbrev, week_number = NULL, ano = NULL, mes = NULL) {
 
     ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png", # nolint
       plot_schedule,
-      width = 6, height = 7, dpi = 300
+      width = 6.5, height = 6.5, dpi = 300
     )
   }
 
@@ -479,7 +482,7 @@ main <- function(team_abbrev, week_number = NULL, ano = NULL, mes = NULL) {
   graf <- image_read("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
 
   # Juntar imagens
-  image_composite(graf, inset, offset = "+365+150") %>%
+  image_composite(graf, inset, offset = "+440+50") %>%
     image_write("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/Hockey/imgs/calendario_mensal.png") # nolint
 
   # Visao semanal para todos os times
