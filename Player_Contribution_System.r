@@ -192,16 +192,6 @@ nhl_goalteanding_stats$SQNSV <- 1 - (1 - nhl_goalteanding_stats$SV) / nhl_goalte
 # 8. Allocate MGG to Individual Goaltenders (PCG) -------------------------
 
 
-
-
-
-
-
-
-
-
-
-
 PrWin <- function(U, V, Time, Lead, ET, EL, OT, OTType, Calc) {
 
   # Calcula a Probabilidade de Vitória usando Poisson Competitiva
@@ -302,7 +292,37 @@ PrWin <- function(U, V, Time, Lead, ET, EL, OT, OTType, Calc) {
   return(PrWin)
 }
 
-(1.7*((190-7)/82)/30) + (1.7*((303-4)/82)/30)
+normalize_goals <- function(GFgR, GAgR, OTGP, EN_goals_for, EN_goals_against, total_games = 82) {
+  # Calcular propensões de marcação
+  total_goals = GFgR + GAgR
+  prop_for = GFgR / total_goals
+  prop_against = GAgR / total_goals
+  
+  # Estimar gols de final de jogo
+  endgame_goals = OTGP * 0.216
+  endgame_goals_for = endgame_goals * prop_for
+  endgame_goals_against = endgame_goals * prop_against
+  
+  # Ajustar valores por jogo
+  endgame_goals_for_per_game = endgame_goals_for / total_games
+  endgame_goals_against_per_game = endgame_goals_against / total_games
+  EN_goals_for_per_game = EN_goals_for / total_games
+  EN_goals_against_per_game = EN_goals_against / total_games
+  
+  # Calcular valores normalizados
+  normalized_goals_for = GFgR - endgame_goals_for_per_game - EN_goals_for_per_game
+  normalized_goals_against = GAgR - endgame_goals_against_per_game - EN_goals_against_per_game
+  
+  # Arredondar para duas casas decimais
+  normalized_goals_for = round(normalized_goals_for, 2)
+  normalized_goals_against = round(normalized_goals_against, 2)
+  
+  # Retornar os resultados como uma lista
+  return(list(
+    goals_for_normalized = normalized_goals_for,
+    goals_against_normalized = normalized_goals_against
+  ))
+}
 
 
 U <- 2.23
