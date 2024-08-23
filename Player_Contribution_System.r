@@ -324,6 +324,56 @@ normalize_goals <- function(GFgR, GAgR, OTGP, EN_goals_for, EN_goals_against, to
   ))
 }
 
+estimate_K <- function(GFg, GAg, GFgR, GAgR, OTW, OTL, OTGP, league_avg_K = 0.92) {
+  # Calcular a taxa de sucesso em overtime
+  ot_success_rate <- (OTW + 0.5 * (OTGP - OTW - OTL)) / OTGP
+  
+  # Calcular a diferença entre gols totais e gols em tempo regulamentar
+  gf_diff <- (GFg - GFgR) / GFg
+  ga_diff <- (GAg - GAgR) / GAg
+  
+  # Ajustar K com base nesses fatores
+  K_adjust <- 1 + (ot_success_rate - 0.5) + (gf_diff - ga_diff)
+  
+  # Calcular K estimado
+  K_estimated <- league_avg_K * K_adjust
+  
+  # Limitar K a um intervalo razoável (por exemplo, entre 0.7 e 1.3)
+  K_final <- max(min(K_estimated, 1.3), 0.7)
+  
+  return(K_final)
+}
+
+# Exemplo de uso para St. Louis Blues (usando dados hipotéticos onde necessário)
+result <- estimate_K(
+  GFg = 2.33,   # Gols a favor por jogo (total)
+  GAg = 2.41,   # Gols contra por jogo (total)
+  GFgR = 2.20,  # Gols a favor por jogo em tempo regulamentar
+  GAgR = 2.39,  # Gols contra por jogo em tempo regulamentar
+  OTW = 11,     # Vitórias em overtime
+  OTL = 2,      # Derrotas em overtime
+  OTGP = 24     # Total de jogos em overtime
+)
+
+print(paste("K estimado:", round(result, 3)))
+
+estimate_endgame_goals <- function(GFgR, GAgR, OTGP, K) {
+  base_endgame_goals <- OTGP * 0.216
+  prop_GF <- GFgR / (GFgR + GAgR)
+  prop_GA <- GAgR / (GFgR + GAgR)
+  
+  GFEGt <- base_endgame_goals * prop_GF * K
+  GAEGl <- base_endgame_goals * prop_GA * K
+  
+  return(list(GFEGt = round(GFEGt, 2), GAEGl = round(GAEGl, 2)))
+}
+
+# Usando o K estimado para calcular GFEGt e GAEGl
+endgame_goals <- estimate_endgame_goals(2.20, 2.39, 24, result)
+print(paste("GFEGt estimado:", endgame_goals$GFEGt))
+print(paste("GAEGl estimado:", endgame_goals$GAEGl))
+
+
 
 U <- 2.23
 V <- 3.65
