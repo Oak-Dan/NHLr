@@ -1,6 +1,8 @@
 library(tidyverse)
 library(tibble)
 library(janitor)
+library(hockeyR)
+
 
 # Criar o DataFrame a partir dos dados
 dados_nhl <- tribble(
@@ -20,7 +22,7 @@ dados_nhl <- tribble(
   "Florida Panthers", 82, 24, 36, 13, 176, 237, 120, 49, 7, 162, 66, 9, 7, 2722.4, 0.913,
   "Los Angeles Kings", 82, 33, 37, 6, 203, 221, 143, 52, 8, 155, 62, 4, 6, 2140.2, 0.897,
   "Minnesota Wild", 82, 42, 29, 10, 198, 178, 137, 52, 9, 130, 43, 5, 10, 2337, 0.924,
-  "Montréal Canadiens", 82, 30, 35, 8, 206, 234, 160, 44, 2, 170, 58, 6, 7, 2681.4, 0.913,
+  "Montreal Canadiens", 82, 30, 35, 8, 206, 234, 160, 44, 2, 170, 58, 6, 7, 2681.4, 0.913,
   "Nashville Predators", 82, 27, 35, 13, 183, 206, 123, 58, 2, 137, 61, 8, 1, 2255, 0.909,
   "New Jersey Devils", 82, 46, 20, 10, 216, 166, 173, 36, 7, 130, 32, 4, 6, 1935.2, 0.914,
   "New York Islanders", 82, 35, 34, 11, 224, 231, 154, 58, 12, 159, 67, 5, 9, 2320.6, 0.900,
@@ -36,6 +38,24 @@ dados_nhl <- tribble(
   "Vancouver Canucks", 82, 45, 23, 13, 264, 208, 165, 87, 12, 136, 62, 10, 8, 2181.2, 0.905,
   "Washington Capitals", 82, 39, 29, 8, 224, 220, 159, 57, 8, 144, 72, 4, 6, 2451.8, 0.910
 )
+
+teams <- c("New Jersey Devils", "Philadelphia Flyers", "Minnesota Wild",
+           "Calgary Flames", "Toronto Maple Leafs", "Tampa Bay Lightning",
+           "Buffalo Sabres", "Ottawa Senators", "Anaheim Ducks", "Dallas Stars",
+           "Washington Capitals", "Detroit Red Wings", "Phoenix Coyotes",
+           "Montreal Canadiens", "Chicago Blackhawks", "Pittsburgh Penguins",
+           "Nashville Predators", "Vancouver Canucks", "Colorado Avalanche",
+           "Edmonton Oilers", "San Jose Sharks", "Carolina Hurricanes",
+           "Boston Bruins", "New York Islanders", "Columbus Blue Jackets",
+           "Atlanta Thrashers", "Los Angeles Kings", "New York Rangers",
+           "Florida Panthers", "St. Louis Blues")
+sqa <- c(0.915, 0.935, 0.947, 0.953, 0.956, 0.965, 0.969, 0.970, 0.972, 0.972,
+         0.973, 0.976, 0.980, 0.982, 0.996, 0.996, 1.000, 1.004, 1.018, 1.018,
+         1.022, 1.024, 1.027, 1.037, 1.041, 1.045, 1.048, 1.057, 1.078, 1.087)
+
+nhl_goal <- as_tibble(data.frame(Team = teams , SQA = sqa ))
+
+dados_nhl <- left_join(dados_nhl, nhl_goal, by="Team")
 
 dados_nhl <- dados_nhl |> 
   clean_names()
@@ -142,13 +162,14 @@ dados_nhl_marginal$mg_w <- round(dados_nhl_marginal$mg/dados_nhl_marginal$wins,1
 
 # MGG = (SOG – ENG) x (1 – SPT) – (SOG x (1 – SQNSV) – ENG)
 
-nhl_goalteanding_stats$SQA <- (1 - nhl_goalteanding_stats$SV)/(1 - nhl_goalteanding_stats$SQNSV)
+dados_nhl$sqnsv <- round(1 - (1 - dados_nhl$sv)/dados_nhl$sqa,3) 
 
-nhl_goalteanding_stats <- nhl_goalteanding_stats |> 
-  select(TEAM, SV, SQA)
+#nhl_goalteanding_stats$SQA <- (1 - nhl_goalteanding_stats$SV)/(1 - nhl_goalteanding_stats$SQNSV)
 
-nhl_goalteanding_stats$SQNSV <- 1 - (1 - nhl_goalteanding_stats$SV) / nhl_goalteanding_stats$SQA
+nhl_goalteanding_stats <- dados_nhl |> 
+  select(team, sv, sqnsv, sqa)
 
+#nhl_goalteanding_stats$SQNSV <- 1 - (1 - nhl_goalteanding_stats$SV) / nhl_goalteanding_stats$SQA
 
 
 # 4. Allocate MGC and MGD to “Situations” ------------------------------------
@@ -157,9 +178,20 @@ nhl_goalteanding_stats$SQNSV <- 1 - (1 - nhl_goalteanding_stats$SV) / nhl_goalte
 # MGC = GF - (GF< x DA)
 # So let’s just break it into its component parts:
 
+
+mgc_mgd_df <- dados_nhl
+mgc_mgd_df$mgc <- round(mgc_mgd_df$gf - (mean(mgc_mgd_df$gf) * DA))
+
+
 # MGCEH = GFEH - (GFEH< x DA) -- Even Handed
+mgc_mgd_df$mgcef <- round(mgc_mgd_df$ev_gf - (mean(mgc_mgd_df$ev_gf) * DA),1)
 # MGCPP = GFPP - (GFPP< x DA) -- Power Play
+mgc_mgd_df$mgcpp <- round(mgc_mgd_df$pp_gf - (mean(mgc_mgd_df$pp_gf) * DA),1)
 # MGCSH = GFSH - (GFSH< x DA) -- Short Handed
+mgc_mgd_df$mgcsh <- round(mgc_mgd_df$sh_gf - (mean(mgc_mgd_df$sh_gf) * DA),1)
+
+#mgc_mgd_df <- mgc_mgd_df |> 
+#  select(team, mgc2, mgcef, mgcpp, mgcsh)
 
 
 # We can do the same for Marginal Goals Prevented, except that we need to take note of
@@ -167,16 +199,38 @@ nhl_goalteanding_stats$SQNSV <- 1 - (1 - nhl_goalteanding_stats$SV) / nhl_goalte
 
 # G = MGG / MGP -- the percentage of MGP allocated to goaltending
 
+mgc_mgd_df$mgg <- ((dados_nhl$sog - dados_nhl$eng) * (1-0.893)) - ((dados_nhl$sog * (1 - dados_nhl$sqnsv)) - dados_nhl$eng)
+mgc_mgd_df$mgp <- (round((mean(mgc_mgd_df$gf) * (1 + DA)) - mgc_mgd_df$ga,1))
+mgc_mgd_df$g <- mgc_mgd_df$mgg/ mgc_mgd_df$mgp
+
+
 # Then:
 # MGD = MGP – MGG =(1 – G) x MGP
+mgc_mgd_df$mgd <- round((1 - mgc_mgd_df$g) *  mgc_mgd_df$mgp,1)
 # MGDEH = (1 – G) x ((GAEH< x (1 + DA)) – GAEH)
+mgc_mgd_df$mgdeh <- round((1 - mgc_mgd_df$g) * ((mean(mgc_mgd_df$ev_ga) * (1 + DA)) - mgc_mgd_df$ev_ga),1)
 # MGDPP = (1 – G) x ((GAPP< x (1 + DA)) – GAPP)
+mgc_mgd_df$mgdsh <- round((1 - mgc_mgd_df$g) * ((mean(mgc_mgd_df$pp_ga) * (1 + DA)) - mgc_mgd_df$pp_ga),1)
 # MGDSH = (1 – G) x ((GASH< x (1 + DA)) – GASH)
+mgc_mgd_df$mgdpp <- round((1 - mgc_mgd_df$g) * ((mean(mgc_mgd_df$sh_ga) * (1 + DA)) - mgc_mgd_df$sh_ga),1)
+
+
+mgc_mgd_df$mg <- round(mgc_mgd_df$gf - mgc_mgd_df$ga + mean(mgc_mgd_df$gf),1)
+mgc_mgd_df$`mgc_%` <- round(mgc_mgd_df$mgc/mgc_mgd_df$mg,1)
+mgc_mgd_df$`mgd_%` <- round(mgc_mgd_df$mgd/mgc_mgd_df$mg,1)
+mgc_mgd_df$`mgg_%` <- round(mgc_mgd_df$mgg/mgc_mgd_df$mg,1)
+
+mgc_mgd_df <- mgc_mgd_df |> 
+  select(team, mgc, `mgc_%`, mgcef, mgcpp, mgcsh, mgp, mgd, `mgd_%`, mgdeh, mgdpp, mgdsh, mgg, `mgg_%`, g)
 
 
 # 5. Translate Marginal Goals to Wins and to Player Contribution (PC) --------
-
-
+# Player Contribution = Player Contribution Factor x Marginal Goals
+# or
+# PC = PCF x MG
+# where
+# PCF = PCSF / (MG / W)
+pcsf <- 20
 
 
 # 6. Allocate MGC to Individual Players (PCO) -----------------------------
