@@ -178,6 +178,9 @@ pr_win_parallel <- function(params, cores = 2) {
   unlist(results)
 }
 
+#u_norm <- (Team_A_GF * Team_B_GA)/league_avg
+#v_norm <- (Team_A_GA * Team_B_GF)/league_avg
+
 # Unit tests
 library(testthat)
 
