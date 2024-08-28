@@ -17,7 +17,7 @@ suppressPackageStartupMessages({
 })
 
 # font_import()
-# loadfonts()
+loadfonts()
 
 # Configuracoess globais
 BACKGROUND_COLOR <- "floralwhite" # nolint
