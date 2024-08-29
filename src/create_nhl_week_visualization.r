@@ -7,16 +7,16 @@
 #' @param team_info_path Path to the RDS file containing the NHL team information data # nolint: line_length_linter.
 #' @param output_path Path where the output PNG file should be saved
 #'
-#' @details
-#' The function performs the following steps:
-#' 
-#' 1. Loads pre-saved NHL schedule and team color data.
-#' 2. Processes the games for the specified week.
-#' 3. Creates a ggplot visualization of the weekly schedule.
-#' 4. Saves the visualization as a PNG file.
-#'
 #' @return This function does not return a value. Instead, it saves the generated visualization as a PNG file
 #' in the specified directory.
+#'
+#' @details
+#' The function performs the following steps:
+#' \itemize{
+#'    \item Loads pre-saved NHL schedule and team color data.
+#'    \item Processes the games for the specified week.
+#'    \item Creates a ggplot visualization of the weekly schedule.
+#'    \item Saves the visualization as a PNG file.
 #'
 #' @note This function requires pre-saved data files:
 #'   - 'nhl_schedule.RDS': containing the NHL schedule
@@ -24,7 +24,8 @@
 #'
 #' @examples
 #' \dontrun{
-#' create_nhl_week_visualization(  # Creates a visualization for week 1
+#' # Creates a visualization for week 1
+#' create_nhl_week_visualization( 
 #'  week_number = 2,
 #'  schedule_path = "/path/to/your/nhl_schedule.RDS",
 #'  team_info_path = "/path/to/your/nhl_team_info.RDS",
