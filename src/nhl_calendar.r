@@ -272,7 +272,7 @@ criar_calendario_jogos <- function(
 }
 
 # Main function
-main <- function(team_abbrev, ano, mes) {
+create_nhl_calendar <- function(team_abbrev, ano, mes) {
   # Load data
   nhl_schedule <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/data/nhl_schedule.RDS") # nolint
   team_colors <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/data/nhl_team_info.RDS") # nolint
@@ -342,7 +342,11 @@ main <- function(team_abbrev, ano, mes) {
 
   # Juntar imagens
   image_composite(graf, inset, offset = "+440+50") %>%
-    image_write("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Figures/calendario_mensal.png") # nolint
+    image_write(paste0(
+      "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Figures/calendario_mensal_", # nolint: line_length_linter.
+      team_abbrev,
+      "_", ano, "_", mes, ".png"
+    )) # nolint
 }
 
 # Executar o script
@@ -362,4 +366,4 @@ ano <- args[2]
 mes <- args[3]
 
 # Chamar a funcao main
-main(team_abbrev, ano, mes)
+create_nhl_calendar(team_abbrev, ano, mes)

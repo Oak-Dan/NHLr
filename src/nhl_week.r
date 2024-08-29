@@ -190,7 +190,7 @@ criar_programacao_semanal <- function(jogos_semana) {
 }
 
 # Main function
-main <- function(week_number) {
+create_nhl_week <- function(week_number) {
   # Load data
   nhl_schedule <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/data/nhl_schedule.RDS") # nolint
   team_colors <- readRDS("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/data/nhl_team_info.RDS") # nolint
@@ -206,7 +206,7 @@ main <- function(week_number) {
     # Criar e salvar o grafico semanal
     programacao_semanal <- criar_programacao_semanal(jogos_semana)
 
-    ggsave("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Figures/programacao_semanal.png", # nolint
+    ggsave(paste0("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Figures/NHL_week_", week_number, ".png"), # nolint
       programacao_semanal,
       width = 10, height = 8, dpi = 300
     )
@@ -226,4 +226,4 @@ if (length(args) < 1) {
 week_number <- args[1]
 
 # Chamar a funcao main
-main(week_number)
+create_nhl_week(week_number)
