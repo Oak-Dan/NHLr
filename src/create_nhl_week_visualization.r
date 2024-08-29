@@ -1,20 +1,22 @@
 #' Create NHL Weekly Schedule Visualization
 #'
+#' Generates a visual representation of the NHL schedule for a specified week.
+#'
 #' @param week_number The week number for which to generate the schedule visualization # nolint: line_length_linter.
 #' @param schedule_path Path to the RDS file containing the NHL schedule data
 #' @param team_info_path Path to the RDS file containing the NHL team information data # nolint: line_length_linter.
 #' @param output_path Path where the output PNG file should be saved
 #'
-#' @description This function generates a visual representation of the NHL schedule for a specified week. # nolint: line_length_linter.
-#' It loads data, processes games, creates a ggplot visualization, and saves it as a PNG file. # nolint: line_length_linter.
+#' @details
+#' The function performs the following steps:
+#' 
+#' 1. Loads pre-saved NHL schedule and team color data.
+#' 2. Processes the games for the specified week.
+#' 3. Creates a ggplot visualization of the weekly schedule.
+#' 4. Saves the visualization as a PNG file.
 #'
-#' @details The function performs the following steps:
-#' 1. Loads pre-saved NHL schedule and team color data
-#' 2. Processes the games for the specified week
-#' 3. Creates a ggplot visualization of the weekly schedule
-#' 4. Saves the visualization as a PNG file
-#'
-#' @return NULL. The function saves the generated plot as a side effect.
+#' @return This function does not return a value. Instead, it saves the generated visualization as a PNG file
+#' in the specified directory.
 #'
 #' @note This function requires pre-saved data files:
 #'   - 'nhl_schedule.RDS': containing the NHL schedule
