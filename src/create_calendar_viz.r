@@ -60,6 +60,9 @@ create_calendar_viz <- function(
   nhl_schedule <- readRDS(schedule_path)
   team_colors <- readRDS(team_info_path)
 
+  # Source the external script
+  source("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/src/theme_danilo.r")
+
   # Get team colors
   team_color <- team_colors %>%
     filter(team_abbr == team_abbrev) %>%
@@ -87,18 +90,6 @@ create_calendar_viz <- function(
     rsvg_png(temp_svg, png_path, width = width, height = height)
     unlink(temp_svg)
     return(png_path)
-  }
-
-  theme_danilo <- function() {
-    theme_minimal(base_size = 10, base_family = "Oswald SemiBold") %+replace%
-      theme(
-        panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank(),
-        plot.background = element_rect(
-          fill = BACKGROUND_COLOR,
-          color = BACKGROUND_COLOR
-        )
-      )
   }
 
   # Function to process game data (monthly view)
@@ -312,61 +303,84 @@ create_calendar_viz <- function(
   }
 
   # Main execution
-  if (!is.null(ano) && !is.null(mes)) {
-    nhl_schedule_mes <- nhl_schedule %>%
-      filter(
-        (homeTeam.abbrev == team_abbrev | awayTeam.abbrev == team_abbrev),
-        year(gameDate) == ano,
-        month(gameDate) == mes
-      ) %>%
-      processar_jogos(team_abbrev)
+  tryCatch(
+    {
+      print(paste("Generating monthly schedule for: ", team_abbrev))
+      if (!is.null(ano) && !is.null(mes)) {
+        nhl_schedule_mes <- nhl_schedule %>%
+          filter(
+            (homeTeam.abbrev == team_abbrev | awayTeam.abbrev == team_abbrev),
+            year(gameDate) == ano,
+            month(gameDate) == mes
+          ) %>%
+          processar_jogos(team_abbrev)
 
-    # Download and convert logos for monthly view
-    nhl_schedule_mes$logo_png <- purrr::map_chr(
-      seq_len(nrow(nhl_schedule_mes)),
-      function(i) {
-        png_path <- file.path(tempdir(), paste0("logo_", i, ".png"))
-        baixar_e_converter_svg(nhl_schedule_mes$logo_url[i], png_path)
+        # Download and convert logos for monthly view
+        nhl_schedule_mes$logo_png <- purrr::map_chr(
+          seq_len(nrow(nhl_schedule_mes)),
+          function(i) {
+            png_path <- file.path(tempdir(), paste0("logo_", i, ".png"))
+            baixar_e_converter_svg(nhl_schedule_mes$logo_url[i], png_path)
+          }
+        )
+
+        team_logo_abbrev_url <- file.path(
+          "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Logos/Logos Light",
+          paste0(team_abbrev, "_light.png")
+        )
+
+        # Create and save the monthly calendar
+        calendario <- criar_calendario_jogos(
+          ano, mes,
+          nhl_schedule_mes, team_logo_abbrev_url, team_abbrev,
+          HOME_COLOR, AWAY_COLOR, TEXT_COLOR_HOME, TEXT_COLOR_AWAY
+        )
+
+        plot_schedule <- ggdraw(calendario) +
+          theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
+
+        ggsave(
+          file.path(output_path, paste0(
+            "calendario_mensal_",
+            team_abbrev,
+            "_", ano, "_", mes, ".png"
+          )),
+          plot_schedule,
+          width = 6.5, height = 6.5, dpi = 300
+        )
       }
-    )
 
-    team_logo_abbrev_url <- file.path(
-      "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Logos/Logos Light",
-      paste0(team_abbrev, "_light.png")
-    )
+      # Read in Inset plot
+      inset <- image_read(file.path(output_path, "p_legend.png"))
 
-    # Create and save the monthly calendar
-    calendario <- criar_calendario_jogos(
-      ano, mes,
-      nhl_schedule_mes, team_logo_abbrev_url, team_abbrev,
-      HOME_COLOR, AWAY_COLOR, TEXT_COLOR_HOME, TEXT_COLOR_AWAY
-    )
-
-    plot_schedule <- ggdraw(calendario) +
-      theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
-
-    ggsave(file.path(output_path, "calendario_mensal.png"),
-      plot_schedule,
-      width = 6.5, height = 6.5, dpi = 300
-    )
-  }
-
-  # Read in Inset plot
-  inset <- image_read(file.path(output_path, "p_legend.png"))
-
-  # Read in plot
-  graf <- image_read(file.path(output_path, "calendario_mensal.png"))
-
-  # Combine images
-  image_composite(graf, inset, offset = "+440+50") %>%
-    image_write(file.path(
-      output_path,
-      paste0(
+      # Read in plot
+      graf <- image_read(file.path(output_path, paste0(
         "calendario_mensal_",
         team_abbrev,
         "_", ano, "_", mes, ".png"
-      )
-    ))
+      )))
+
+      # Combine images
+      image_composite(graf, inset, offset = "+440+50") %>%
+        image_write(file.path(
+          output_path,
+          paste0(
+            "calendario_mensal_",
+            team_abbrev,
+            "_", ano, "_", mes, ".png"
+          )
+        ))
+      print(paste0(
+        "Visualization saved to:", output_path,
+        "calendario_mensal_",
+        team_abbrev,
+        "_", ano, "_", mes, ".png"
+      ))
+    },
+    error = function(e) {
+      stop("An error occurred: ", e$message)
+    }
+  )
 }
 
 schedule_path <- "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/data/nhl_schedule.RDS"
@@ -375,5 +389,5 @@ output_path <- "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/
 
 create_calendar_viz(
   schedule_path, team_info_path, output_path,
-  team_abbrev = "EDM", ano = 2024, mes = 10
+  team_abbrev = "NYI", ano = 2024, mes = 10
 )

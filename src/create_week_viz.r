@@ -75,18 +75,8 @@ create_week_viz <- function(
   BACKGROUND_COLOR <- "floralwhite"
   TEXT_COLOR_DEFAULT <- "black"
 
-  # Helper function: theme_danilo
-  theme_danilo <- function() {
-    theme_minimal(base_size = 10, base_family = "Oswald SemiBold") %+replace%
-      theme(
-        panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank(),
-        plot.background = element_rect(
-          fill = BACKGROUND_COLOR,
-          color = BACKGROUND_COLOR
-        )
-      )
-  }
+  # Source the external script
+  source("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/src/theme_danilo.r")
 
   # Process games for the week
   process_games <- function(games, week_num, colors) {
@@ -231,7 +221,10 @@ create_week_viz <- function(
         "NHL_week_", week_number,
         ".png"
       ))
-      ggsave(output_file, programacao_semanal, width = 10, height = 8, dpi = 300)
+      ggsave(output_file, programacao_semanal,
+        width = 10,
+        height = 8, dpi = 300
+      )
 
       print(paste("Visualization saved to:", output_file))
     },
@@ -246,7 +239,7 @@ team_info_path <- "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/N
 output_path <- "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Figures/"
 
 create_week_viz(
-  week_number = 2,
+  week_number = 3,
   schedule_path,
   team_info_path,
   output_path
