@@ -9,6 +9,10 @@ library(extrafont)
 library(ggchicklet)
 library(grid)
 library(nflreadr)
+library(webshot2)
+library(gt)
+library(gtExtras)
+
 
 
 # Load data
@@ -96,11 +100,13 @@ for (dia in dias_semanas) {
   }
 }
 
-
-nhl_schedule2 <- nhl_schedule |> 
+dias_semana_pt <- c("Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom")
+nhl_schedule2 <- nhl_schedule |>
+  filter(week == 13) |> 
   mutate(start_date = min(as.Date(gameDate), na.rm = TRUE),
-         end_date = max(as.Date(gameDate), na.rm = TRUE)) |>  
-  select(homeTeam.placeName.default, awayTeam.placeName.default, gameDate, week, start_date, end_date) |> 
+         end_date = max(as.Date(gameDate), na.rm = TRUE),
+         dia_semana = dias_semana_pt[wday(gameDate, week_start = 1)]) |>  
+  select(homeTeam.placeName.default, awayTeam.placeName.default, gameDate, week, start_date, end_date, dia_semana) |> 
   rename(home_team = homeTeam.placeName.default, away_team = awayTeam.placeName.default, date = gameDate)
   
 
@@ -110,8 +116,10 @@ nhl_schedule2 <- nhl_schedule |>
 
 
 plot_data <- nhl_schedule2 %>% 
-  select(home_team, away_team, week) %>% 
-  nflreadr::clean_homeaway()
+  select(home_team, away_team, dia_semana, week) %>%
+  rename(team = home_team, opponent = away_team) |> 
+  mutate(location = "home")
+  #nflreadr::clean_homeaway()
 
 logos <- nhl_schedule |>
   arrange(awayTeam.placeName.default) |> 
@@ -123,11 +131,11 @@ logos <- nhl_schedule |>
 logos <- logos |> pull(logo) |> set_names(logos$team)
 
 plot_data <- plot_data %>% 
-  mutate(opponent = glue("<img src='{logos[opponent]}' alt={location} style='height:25px; vertical-align:middle;'>"))
+  mutate(opponent = glue::glue("<img src='{logos[opponent]}' alt={location} style='height:25px; vertical-align:middle;'>"))
 
 
 plot_data <- plot_data %>% 
-  pivot_wider(id_cols = team, names_from = week, values_from = opponent) %>% 
+  pivot_wider(id_cols = team, names_from = dia_semana, values_from = opponent) %>% 
   arrange(team) %>% 
   mutate(team = logos[team])
 
@@ -135,7 +143,7 @@ generate_css <- function(indices, css_id, color) {
   map2_chr(
     .x = indices[, 1],
     .y = indices[, 2],
-    .f = ~glue("#{css_id} tbody tr:nth-child({.x}) td:nth-child({.y}) {{ background-color: {color}; }}")
+    .f = ~glue::glue("#{css_id} tbody tr:nth-child({.x}) td:nth-child({.y}) {{ background-color: {color}; }}")
   )
 }
 
@@ -155,7 +163,7 @@ additional_css <- "
 
 html_content <- '
 <div style="text-align: center;">
-  <h1 style="margin: 0; font-size: 20px;">Big Ten Football Schedule | 2024</h1>
+  <h1 style="margin: 0; font-size: 20px;">NHL Week Schedule | 2024/2025</h1>
   <div style="display: flex; justify-content: center; align-items: center; margin-top: 5px;">
     <div style="border: 1.5px solid black; padding: 2px 10px; text-align: center; background-color: #cce7f5; font-size: 10px; margin-right: 5px;">Home</div>
     <div style="border: 1.5px solid black; padding: 2px 10px; text-align: center; font-size: 10px; margin-right: 5px;">Away</div>
@@ -182,4 +190,4 @@ plot_data %>%
   tab_options(data_row.padding = 1) %>% 
   # apply above css
   opt_css(c(home_css, bye_css, additional_css)) %>% 
-  gtsave_extra("schedule.png", zoom = 5)
+  gtsave_extra("schedule2.png", zoom = 10)
