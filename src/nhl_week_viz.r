@@ -1,6 +1,8 @@
 # Load required packages
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, ggplot2, ggimage, lubridate, ggnewscale, ggforce, here)
+pacman::p_load(
+  tidyverse, ggplot2, ggimage,
+  lubridate, ggnewscale, ggforce, here
+)
 
 # Set the project root
 here::set_here("/Users/danilooak/Documents/Code/R_Code/Sports_Analytics/NHL/")
@@ -78,7 +80,9 @@ create_nhl_schedule <- function(schedule_data, team_info, week_num,
         logo_away = file.path(base_path, paste0(awayTeam.abbrev, "_light.png")),
         logo_home = file.path(base_path, paste0(
           homeTeam.abbrev,
-          ifelse(homeTeam.abbrev %in% c("TOR", "TBL"), "_dark.png", "_light.png")
+          ifelse(homeTeam.abbrev %in% c("TOR", "TBL"),
+            "_dark.png", "_light.png"
+          )
         )),
         color_away = colors$team_secondary_color[match(
           awayTeam.abbrev,
@@ -179,7 +183,10 @@ create_nhl_schedule <- function(schedule_data, team_info, week_num,
       theme_danilo() +
       ggplot2::theme(
         plot.margin = ggplot2::margin(30, 10, 30, 10),
-        plot.title = ggplot2::element_text(hjust = 0.5, vjust = 2, size = font_sizes$title),
+        plot.title = ggplot2::element_text(
+          hjust = 0.5,
+          vjust = 2, size = font_sizes$title
+        ),
         axis.text = ggplot2::element_blank(),
         axis.title = ggplot2::element_blank(),
         panel.grid = ggplot2::element_blank(),
@@ -320,8 +327,8 @@ create_nhl_schedule <- function(schedule_data, team_info, week_num,
       10
     } else {
       max(
-        3,
-        3 + 0.5 * nrow(nhl_schedule)
+        2,
+        2 + 0.5 * nrow(nhl_schedule)
       )
     }
     filename <- file.path(
@@ -350,7 +357,10 @@ source(here::here("src", "theme_danilo.r"))
 
 # Example usage
 # For the entire week
-full_week_plot <- create_nhl_schedule(schedule_data, team_info, week_num = 2)
+# full_week_plot <- create_nhl_schedule(schedule_data, team_info, week_num = 2)
 
 # For a specific day (e.g., Tuesday)
-# tuesday_plot <- create_nhl_schedule(schedule_data, team_info, week_num = 2, day = "Wed")
+week_plot <- create_nhl_schedule(schedule_data,
+  team_info,
+  week_num = 2, day = "Wed"
+)

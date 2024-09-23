@@ -4,8 +4,8 @@
 #' It creates a formatted calendar image showing home and away games, with team logos and game times.
 #'
 #' @param team_abbrev Character string. The abbreviation of the NHL team (e.g., "TOR" for Toronto Maple Leafs).
-#' @param ano Numeric. The year for which to create the calendar.
-#' @param mes Numeric. The month for which to create the calendar (1-12).
+#' @param year Numeric. The year for which to create the calendar.
+#' @param month Numeric. The month for which to create the calendar (1-12).
 #' @param schedule_path Character string. Path to the NHL schedule RDS file.
 #' @param team_info_path Character string. Path to the NHL team info RDS file.
 #' @param output_path Character string. Path to the output directory for saving the calendar image.
@@ -22,7 +22,7 @@
 #'
 #' @export
 create_calendar_viz <- function(
-    team_abbrev, ano, mes,
+    team_abbrev, year, month,
     schedule_path = "/path/to/nhl_schedule.RDS",
     team_info_path = "/path/to/nhl_team_info.RDS",
     output_path = "/path/to/output/") {
@@ -49,11 +49,19 @@ create_calendar_viz <- function(
   if (!is.character(team_abbrev) || nchar(team_abbrev) != 3) {
     stop("team_abbrev must be a 3-letter character string")
   }
-  if (!is.numeric(ano) || ano < 1900 || ano > 2100) {
-    stop("ano must be a valid year")
+  if (!is.numeric(year) || year < 1900 || year > 2100) {
+    stop("year must be a valid year")
   }
-  if (!is.numeric(mes) || mes < 1 || mes > 12) {
-    stop("mes must be a number between 1 and 12")
+  if (!is.numeric(month) || month < 1 || month > 12) {
+    stop("month must be a number between 1 and 12")
+  }
+
+  # Check if input files exist
+  if (!file.exists(schedule_path)) {
+    stop("Schedule file not found: ", schedule_path)
+  }
+  if (!file.exists(team_info_path)) {
+    stop("Team info file not found: ", team_info_path)
   }
 
   # Load data
@@ -61,7 +69,7 @@ create_calendar_viz <- function(
   team_colors <- readRDS(team_info_path)
 
   # Source the external script
-  source("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/src/theme_danilo.r")
+  source("/Users/danilooak/Documents/Code/R_Code/Sports_Analytics/NHL/src/theme_danilo.r")
 
   # Get team colors
   team_color <- team_colors %>%
@@ -80,11 +88,11 @@ create_calendar_viz <- function(
   TEXT_COLOR_AWAY <- team_color$team_text_color_away
 
   # Convert month to numeric
-  mes <- as.numeric(mes)
+  month <- as.numeric(month)
 
   # Helper functions
-  baixar_e_converter_svg <- function(url, png_path,
-                                     width = 1000, height = 1000) {
+  download_and_convert_svg <- function(url, png_path,
+                                       width = 1000, height = 1000) {
     temp_svg <- tempfile(fileext = ".svg")
     GET(url, write_disk(temp_svg, overwrite = TRUE))
     rsvg_png(temp_svg, png_path, width = width, height = height)
@@ -93,15 +101,15 @@ create_calendar_viz <- function(
   }
 
   # Function to process game data (monthly view)
-  processar_jogos <- function(jogos, team_abbrev) {
-    jogos %>%
+  process_games <- function(games, team_abbrev) {
+    games %>%
       mutate(
-        data = as.Date(gameDate),
-        adversario = if_else(homeTeam.abbrev == team_abbrev,
+        date = as.Date(gameDate),
+        opponent = if_else(homeTeam.abbrev == team_abbrev,
           awayTeam.placeName.default,
           homeTeam.placeName.default
         ),
-        time_abreviado = if_else(homeTeam.abbrev == team_abbrev,
+        team_abbreviated = if_else(homeTeam.abbrev == team_abbrev,
           awayTeam.abbrev,
           homeTeam.abbrev
         ),
@@ -109,87 +117,88 @@ create_calendar_viz <- function(
           awayTeam_logo_light,
           homeTeam_logo_light
         ),
-        horario = sub(
+        time = sub(
           "^.*T([0-9]{2}:[0-9]{2}).*$", "\\1",
           startTimeUTC
         ),
-        local = case_when(
+        location = case_when(
           neutralSite == TRUE ~ "Special",
-          homeTeam.abbrev == team_abbrev ~ "Casa",
-          TRUE ~ "Fora"
+          homeTeam.abbrev == team_abbrev ~ "Home",
+          TRUE ~ "Away"
         )
       ) %>%
       select(
-        id, data, adversario, time_abreviado,
+        id, date, opponent, team_abbreviated,
         logo_url,
-        horario,
-        local
+        time,
+        location
       )
   }
 
   # Function to prepare calendar data (monthly view)
-  preparar_dados_calendario <- function(ano, mes, jogos,
-                                        home_color, away_color, text_color_home,
-                                        text_color_away) {
-    inicio_mes <- as.Date(paste(ano, mes, "01", sep = "-"))
-    fim_mes <- ceiling_date(inicio_mes, "month") - days(1)
-    todos_dias <- seq(inicio_mes, fim_mes, by = "day")
+  prepare_calendar_data <- function(year, month, games,
+                                    home_color, away_color, text_color_home,
+                                    text_color_away) {
+    month_start <- as.Date(paste(year, month, "01", sep = "-"))
+    month_end <- ceiling_date(month_start, "month") - days(1)
+    all_days <- seq(month_start, month_end, by = "day")
 
-    dias_semana_pt <- c(
-      "Seg", "Ter",
-      "Qua", "Qui",
-      "Sex", "Sab",
-      "Dom"
+    weekdays_en <- c(
+      "Mon", "Tue",
+      "Wed", "Thu",
+      "Fri", "Sat",
+      "Sun"
     )
 
-    calendario <- data.frame(
-      data = todos_dias,
-      dia = day(todos_dias),
-      dia_semana = factor(
-        dias_semana_pt[wday(todos_dias,
+    calendar <- data.frame(
+      date = all_days,
+      day = day(all_days),
+      weekday = factor(
+        weekdays_en[wday(all_days,
           week_start = 1
         )],
-        levels = dias_semana_pt
+        levels = weekdays_en
       )
     ) %>%
-      left_join(jogos, by = "data") %>%
+      left_join(games, by = "date") %>%
       mutate(
-        semana = as.numeric(format(data, "%W")) -
+        week = as.numeric(format(date, "%W")) -
           as.numeric(format(
-            as.Date(paste(ano, mes, "01", sep = "-")),
+            as.Date(paste(year, month, "01", sep = "-")),
             "%W"
           )) + 1,
-        cor_fundo = case_when(
-          local == "Casa" ~ home_color,
-          local == "Fora" ~ away_color,
-          local == "Special" ~ "white",
+        background_color = case_when(
+          location == "Home" ~ home_color,
+          location == "Away" ~ away_color,
+          location == "Special" ~ "white",
           TRUE ~ BACKGROUND_COLOR
         ),
-        cor_texto = case_when(
-          local == "Casa" ~ text_color_home,
-          local == "Fora" ~ text_color_away,
+        text_color = case_when(
+          location == "Home" ~ text_color_home,
+          location == "Away" ~ text_color_away,
           TRUE ~ TEXT_COLOR_DEFAULT
         )
       )
 
-    return(calendario)
+    return(calendar)
   }
 
   # Main function to create monthly calendar
-  criar_calendario_jogos <- function(ano, mes, jogos, logo_png_team,
-                                     team_abbrev, home_color, away_color, text_color_home,
-                                     text_color_away) {
-    calendario <- preparar_dados_calendario(
-      ano, mes, jogos,
+  create_game_calendar <- function(year, month, games, logo_png_team,
+                                   team_abbrev, home_color, away_color,
+                                   text_color_home,
+                                   text_color_away) {
+    calendar <- prepare_calendar_data(
+      year, month, games,
       home_color, away_color, text_color_home,
       text_color_away
     )
 
-    meses_pt <- c(
-      "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    months_en <- c(
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
     )
-    nome_mes <- meses_pt[as.numeric(mes)]
+    month_name <- months_en[as.numeric(month)]
 
     img <- logo_png_team
 
@@ -197,32 +206,34 @@ create_calendar_viz <- function(
     legend_data <- data.frame(
       x = c(2, 2.8),
       y = 1,
-      label = c("Casa", "Fora"),
+      label = c("Home", "Away"),
       color = c(home_color, away_color),
       text_color = c(text_color_home, text_color_away)
     )
 
-    p_calendar <- ggplot(calendario, aes(x = dia_semana, y = semana)) +
-      geom_tile(aes(fill = cor_fundo), color = "black", linewidth = 0.5) +
+    p_calendar <- ggplot(calendar, aes(x = weekday, y = week)) +
+      geom_tile(aes(fill = background_color),
+        color = "black", linewidth = 0.5
+      ) +
       scale_fill_identity() +
       geom_text(
-        aes(label = dia, color = cor_texto),
+        aes(label = day, color = text_color),
         size = 3, vjust = 1,
         nudge_x = -0.40, nudge_y = 0.45, family = "Oswald SemiBold"
       ) +
       geom_image(
-        data = subset(calendario, !is.na(logo_png)),
+        data = subset(calendar, !is.na(logo_png)),
         aes(image = logo_png), size = 0.12, nudge_y = 0.2
       ) +
       geom_text(
-        data = subset(calendario, !is.na(time_abreviado)),
-        aes(label = time_abreviado, color = cor_texto), size = 3.5,
+        data = subset(calendar, !is.na(team_abbreviated)),
+        aes(label = team_abbreviated, color = text_color), size = 3.5,
         vjust = 1.2, nudge_y = -0.09,
         family = "Oswald SemiBold"
       ) +
       geom_text(
-        data = subset(calendario, !is.na(horario)),
-        aes(label = horario, color = cor_texto), size = 2.5,
+        data = subset(calendar, !is.na(time)),
+        aes(label = time, color = text_color), size = 2.5,
         vjust = 1.2, nudge_y = -0.3,
         family = "Oswald SemiBold"
       ) +
@@ -230,8 +241,11 @@ create_calendar_viz <- function(
       scale_y_reverse() +
       coord_fixed() +
       labs(
-        title = toupper(nome_mes),
-        caption = "Todas as datas e horarios estao no Horario de Brasilia (BRT, UTC-3) e estao sujeitos a alteracoes.",
+        title = toupper(month_name),
+        caption = c(
+          "All dates and times are in Brasilia Time (BRT, UTC-3) and are subject to change.",
+          "Author: Danilo Carvalho"
+        ),
         x = NULL,
         y = NULL
       ) +
@@ -245,7 +259,7 @@ create_calendar_viz <- function(
           size = 16
         ),
         plot.caption = element_text(
-          size = 8, hjust = 0.02,
+          size = 8, hjust = c(0.02, 1),
           vjust = -5, color = "black"
         ),
         axis.text.x = element_text(
@@ -255,7 +269,7 @@ create_calendar_viz <- function(
         ),
         axis.text.y = element_blank(),
         axis.title = element_blank(),
-        plot.margin = margin(t = 10, r = 10, b = 10, l = 10, unit = "pt")
+        plot.margin = margin(t = 20, r = 10, b = 10, l = 10, unit = "pt")
       )
 
     # Create the legend plot
@@ -305,45 +319,48 @@ create_calendar_viz <- function(
   # Main execution
   tryCatch(
     {
-      print(paste("Generating monthly schedule for: ", team_abbrev))
-      if (!is.null(ano) && !is.null(mes)) {
-        nhl_schedule_mes <- nhl_schedule %>%
+      print(paste("Generating monthly schedule for:", team_abbrev))
+      if (!is.null(year) && !is.null(month)) {
+        nhl_schedule_month <- nhl_schedule %>%
           filter(
             (homeTeam.abbrev == team_abbrev | awayTeam.abbrev == team_abbrev),
-            year(gameDate) == ano,
-            month(gameDate) == mes
+            year(gameDate) == year,
+            month(gameDate) == month
           ) %>%
-          processar_jogos(team_abbrev)
+          process_games(team_abbrev)
 
         # Download and convert logos for monthly view
-        nhl_schedule_mes$logo_png <- purrr::map_chr(
-          seq_len(nrow(nhl_schedule_mes)),
+        nhl_schedule_month$logo_png <- purrr::map_chr(
+          seq_len(nrow(nhl_schedule_month)),
           function(i) {
             png_path <- file.path(tempdir(), paste0("logo_", i, ".png"))
-            baixar_e_converter_svg(nhl_schedule_mes$logo_url[i], png_path)
+            download_and_convert_svg(nhl_schedule_month$logo_url[i], png_path)
           }
         )
 
         team_logo_abbrev_url <- file.path(
-          "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Logos/Logos Light",
+          "/Users/danilooak/Documents/Code/R_Code/Sports_Analytics/NHL/imgs/Logos/",
           paste0(team_abbrev, "_light.png")
         )
 
         # Create and save the monthly calendar
-        calendario <- criar_calendario_jogos(
-          ano, mes,
-          nhl_schedule_mes, team_logo_abbrev_url, team_abbrev,
+        calendar <- create_game_calendar(
+          year, month,
+          nhl_schedule_month, team_logo_abbrev_url, team_abbrev,
           HOME_COLOR, AWAY_COLOR, TEXT_COLOR_HOME, TEXT_COLOR_AWAY
         )
 
-        plot_schedule <- ggdraw(calendario) +
-          theme(plot.background = element_rect(fill = BACKGROUND_COLOR, color = NA))
+        plot_schedule <- ggdraw(calendar) +
+          theme(plot.background = element_rect(
+            fill = BACKGROUND_COLOR,
+            color = NA
+          ))
 
         ggsave(
           file.path(output_path, paste0(
-            "calendario_mensal_",
+            "monthly_calendar_",
             team_abbrev,
-            "_", ano, "_", mes, ".png"
+            "_", year, "_", month, ".png"
           )),
           plot_schedule,
           width = 6.5, height = 6.5, dpi = 300
@@ -354,40 +371,44 @@ create_calendar_viz <- function(
       inset <- image_read(file.path(output_path, "p_legend.png"))
 
       # Read in plot
-      graf <- image_read(file.path(output_path, paste0(
-        "calendario_mensal_",
+      graph <- image_read(file.path(output_path, paste0(
+        "monthly_calendar_",
         team_abbrev,
-        "_", ano, "_", mes, ".png"
+        "_", year, "_", month, ".png"
       )))
 
       # Combine images
-      image_composite(graf, inset, offset = "+440+50") %>%
+      image_composite(graph, inset, offset = "+440+50") %>%
         image_write(file.path(
           output_path,
           paste0(
-            "calendario_mensal_",
+            "monthly_calendar_",
             team_abbrev,
-            "_", ano, "_", mes, ".png"
+            "_", year, "_", month, ".png"
           )
         ))
       print(paste0(
         "Visualization saved to:", output_path,
-        "calendario_mensal_",
+        "monthly_calendar_",
         team_abbrev,
-        "_", ano, "_", mes, ".png"
+        "_", year, "_", month, ".png"
       ))
     },
     error = function(e) {
-      stop("An error occurred: ", e$message)
-    }
+        print(paste("An error occurred:", e$message))
+        print("Stack trace:")
+        print(sys.calls())
+        stop(e)
+      }
+
   )
 }
 
-schedule_path <- "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/data/nhl_schedule.RDS"
-team_info_path <- "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/data/nhl_team_info.RDS"
-output_path <- "/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/imgs/Figures/"
+schedule_path <- "/Users/danilooak/Documents/Code/R_Code/Sports_Analytics/NHL/data/nhl_schedule.RDS"
+team_info_path <- "/Users/danilooak/Documents/Code/R_Code/Sports_Analytics/NHL/data/nhl_team_info.RDS"
+output_path <- "/Users/danilooak/Documents/Code/R_Code/Sports_Analytics/NHL/imgs/Figures/"
 
 create_calendar_viz(
-  schedule_path, team_info_path, output_path,
-  team_abbrev = "NYI", ano = 2024, mes = 10
+  team_abbrev = "UTA", year = 2024, month = 10,
+  schedule_path, team_info_path, output_path
 )
