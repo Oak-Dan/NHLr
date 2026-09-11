@@ -1,75 +1,116 @@
-#' Get current team roster
+#' Get a team's roster
 #'
-#' @param team A team name or abbreviation, as a string - or the NHL integer team ID
+#' @param team A three-letter NHL team code (e.g. "TOR", "BOS"). See
+#' \code{\link{get_current_rosters}} for the full list of valid codes.
+#' @param season A season in YYYYYYYY format (e.g. 20242025), or "current"
+#' for the active roster as of right now. Defaults to "current".
+#' @param timeout_sec Number of seconds to wait on the API before giving up.
+#' Defaults to 10.
 #'
-#' @return A tibble containing the current official team roster per NHL.com
+#' @description Get a team's roster from the NHL's official web API
+#' (api-web.nhle.com/v1/roster). Returns forwards, defensemen, and goalies
+#' combined into a single tibble.
+#'
+#' Results are memoised (cached in memory) per unique
+#' team/season/timeout_sec combination for the rest of the R session, so
+#' calling this again for a team you've already fetched is instant and
+#' makes no network request. Call \code{memoise::forget(get_team_rosters)}
+#' to clear the cache and force fresh data.
+#'
+#' @return A tibble containing the roster for the specified team
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' get_team_rosters("SEA")
+#' get_team_rosters("TOR")
+#' get_team_rosters("BOS", season = 20232024)
 #' }
-get_team_rosters <- function(team){
+get_team_rosters <- memoise::memoise(function(team, season = "current", timeout_sec = 10){
 
-  # if looking for a single team roster with team name or abbreviation
-  if(is.character(team)){
-    # get all team names & ids
-    team_list <- jsonlite::read_json("https://statsapi.web.nhl.com/api/v1/teams")$teams %>%
-      dplyr::tibble() %>%
-      tidyr::unnest_wider(1) %>%
-      dplyr::select(team_id = id, full_team_name = name, team_abbr = abbreviation)
+  assertthat::assert_that(
+    is.character(team), length(team) == 1, nchar(team) > 0,
+    msg = "`team` must be a single team code, e.g. \"TOR\""
+  )
 
-    # find team id from supplied team name
-    team_id <- team_list %>%
-      dplyr::filter(full_team_name == team |
-                      team_abbr == team) %>%
-      dplyr::pull(team_id)
-  } else {
-    team_id <- team
-  }
+  team <- toupper(team)
+  url <- glue::glue("https://api-web.nhle.com/v1/roster/{team}/{season}")
 
-  # access NHL API
-  url <- paste0("https://statsapi.web.nhl.com/api/v1/teams/",team_id,"/roster")
-
-  site <- tryCatch(
-    jsonlite::read_json(url),
-    warning = function(cond){
-      message(paste0("There was a problem fetching rosters\n\n",cond))
-      return(NULL)
-    },
+  site <- tryCatch({
+    resp <- httr::GET(url, httr::timeout(timeout_sec))
+    httr::stop_for_status(resp, task = paste("fetch roster for", team))
+    jsonlite::fromJSON(
+      httr::content(resp, as = "text", encoding = "UTF-8"),
+      simplifyVector = FALSE
+    )
+  },
     error = function(cond){
-      message(paste0("There was a problem fetching rosters\n\n",cond))
+      message(paste0(
+        "There was a problem fetching the roster for ", team, "\n\n",
+        conditionMessage(cond)
+      ))
       return(NULL)
     }
   )
 
   if(is.null(site)){
-    stop("Could not get current rosters, please try again later")
+    stop(paste("Could not get roster for team", team))
   }
 
-  # parse json roster data
-  roster <- site$roster %>%
-    dplyr::tibble() %>%
-    tidyr::unnest_wider(1) %>%
-    tidyr::unnest_wider(person) %>%
-    tidyr::unnest_wider(position) %>%
-    janitor::clean_names() %>%
-    dplyr::mutate(
-      jersey_number = as.integer(jersey_number),
-      position_type = dplyr::case_when(
-        type == "Forward" ~ "F",
-        type == "Goalie" ~ "G",
-        type == "Defenseman" ~ "D"
-      ),
-      team_id = team_id,
-    ) %>%
-    # remove excessive position vars
-    dplyr::select(-code, -name, -link, -type) %>%
-    dplyr::rename(
-      player_id = id,
-      player = full_name,
-      position = abbreviation
-    )
+  parse_group <- function(group){
+    if(length(group) == 0) return(dplyr::tibble())
+    group |>
+      dplyr::tibble() |>
+      tidyr::unnest_wider(1) |>
+      tidyr::unnest_wider(firstName, names_sep = "_") |>
+      tidyr::unnest_wider(lastName, names_sep = "_") |>
+      tidyr::unnest_wider(birthCity, names_sep = "_") |>
+      dplyr::rename(
+        first_name = firstName_default,
+        last_name = lastName_default,
+        birth_city = birthCity_default
+      )
+  }
 
-  return(roster)
-}
+  rosters <- dplyr::bind_rows(
+    parse_group(site$forwards),
+    parse_group(site$defensemen),
+    parse_group(site$goalies)
+  )
+
+  if(nrow(rosters) == 0){
+    stop(paste("Could not get roster for team", team))
+  }
+
+  if(!"sweaterNumber" %in% names(rosters)) rosters$sweaterNumber <- NA_integer_
+
+  rosters |>
+    dplyr::mutate(
+      player_name = paste(first_name, last_name),
+      position = positionCode,
+      position = ifelse(position %in% c("L","R"), paste0(position,"W"), position),
+      position_type = dplyr::case_when(
+        position %in% c("LW","RW","C") ~ "F",
+        position == "D" ~ "D",
+        position == "G" ~ "G",
+        TRUE ~ NA_character_
+      ),
+      team_abbr = team
+    ) |>
+    dplyr::select(
+      player_id = id,
+      player_name,
+      first_name,
+      last_name,
+      jersey_number = sweaterNumber,
+      position,
+      position_type,
+      shoots_catches = shootsCatches,
+      height_in = heightInInches,
+      weight_lbs = weightInPounds,
+      birth_date = birthDate,
+      birth_city,
+      birth_country = birthCountry,
+      headshot,
+      team_abbr
+    )
+})

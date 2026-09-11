@@ -30,8 +30,8 @@ library(tidyverse)
 
 get_game_ids <- function(season = NULL, day = as.Date(Sys.Date(), "%Y-%m-%d")) {
   # load team abbreviations
-  load("/Users/danilooak/Documents/Code/R Projects/Sports Analytics/NHL/data/team_logos_colors.rda")
-  team_info <- team_logos_colors
+  path <- "Data/nhl_team_info.RDS"
+  team_info <- readRDS(path)
 
   if (is.null(season)) {
     # scrape day's games
@@ -150,12 +150,12 @@ get_game_ids <- function(season = NULL, day = as.Date(Sys.Date(), "%Y-%m-%d")) {
       # add team names because that's what it used to pull from old API
       dplyr::left_join(
         team_info %>%
-          dplyr::select(home_abbr = team_abbr, home_name = full_team_name),
+          dplyr::select(home_abbr = team_abbr, home_name = team_full_name),
         by = c("home_abbr")
       ) %>%
       dplyr::left_join(
         team_info %>%
-          dplyr::select(away_abbr = team_abbr, away_name = full_team_name),
+          dplyr::select(away_abbr = team_abbr, away_name = team_full_name),
         by = "away_abbr"
       ) %>%
       dplyr::select(
@@ -182,6 +182,3 @@ get_game_ids <- function(season = NULL, day = as.Date(Sys.Date(), "%Y-%m-%d")) {
 
   return(game_id_list)
 }
-
-
-game_id_list <- get_game_ids(season = 2025)
