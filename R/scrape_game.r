@@ -123,7 +123,7 @@
 scrape_game <- function(game_id){
 
   # load team abbreviations
-  team_info <- hockeyR::team_logos_colors
+  team_info <- nhl_teams_info
 
   # get game url
   url <- glue::glue("https://api-web.nhle.com/v1/gamecenter/{game_id}/play-by-play")
@@ -993,21 +993,21 @@ scrape_game <- function(game_id){
 
   # add xg
   # depends on strength state, needs shift data to be there
-  pbp_return <- tryCatch(
-    calculate_xg(pbp_full),
-    warning = function(cond){
-      message(paste0("There was a problem calulating xG for game id ",game_id,"\n\n",cond))
-      return(NULL)
-    },
-    error = function(cond){
-      message(paste0("There was a problem calulating xG for game id ",game_id,"\n\n",cond))
-      return(NULL)
-    }
-  )
+  #pbp_return <- tryCatch(
+  #  calculate_xg(pbp_full),
+  #  warning = function(cond){
+  #    message(paste0("There was a problem calulating xG for game id ",game_id,"\n\n",cond))
+  #    return(NULL)
+  #  },
+  #  error = function(cond){
+  #    message(paste0("There was a problem calulating xG for game id ",game_id,"\n\n",cond))
+  #    return(NULL)
+  #  }
+  #)
 
-  if(is.null(pbp_return)){
-    pbp_return <- pbp_full
-  }
+  #if(is.null(pbp_return)){
+  #  pbp_return <- pbp_full
+  #}
 
   return(pbp_full)
 
