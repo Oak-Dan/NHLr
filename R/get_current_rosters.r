@@ -4,7 +4,7 @@
 #' for active rosters as of right now. Defaults to "current".
 #' @param teams Optional character vector of three-letter team codes to
 #' limit the pull to (e.g. \code{c("TOR","BOS")}). Defaults to \code{NULL},
-#' which pulls every team found in \code{Data/nhl_team_info.RDS}.
+#' which pulls every team found in the team table (see \code{\link{load_team_info}}).
 #' @param cores Number of parallel workers to fetch team rosters with.
 #' Defaults to 2. Set to 1 to fetch sequentially.
 #'
@@ -13,7 +13,7 @@
 #' web API (api-web.nhle.com/v1/roster) in parallel via \pkg{future.apply},
 #' reusing \code{\link{get_team_rosters}}'s memoised (cached) fetches on
 #' repeat calls. Team metadata (full name, division, conference, logos,
-#' colors) is joined in from the cached \code{Data/nhl_team_info.RDS} —
+#' colors) is joined in via \code{\link{load_team_info}} —
 #' the same file \code{\link{get_game_ids}} uses — so team names/colors
 #' stay consistent across the whole package.
 #'
@@ -22,7 +22,7 @@
 #'
 #' @return A tibble containing the current rosters for every requested team,
 #' with player columns from \code{\link{get_team_rosters}} plus every
-#' column in \code{Data/nhl_team_info.RDS} (team_full_name, team_id,
+#' column in the team table (team_full_name, team_id,
 #' division, conference, logos, colors, etc.)
 #' @export
 #'
@@ -38,15 +38,7 @@ get_current_rosters <- function(season = "current", teams = NULL, cores = 2){
     msg = "`cores` must be a positive integer"
   )
 
-  team_info_path <- "Data/nhl_team_info.RDS"
-  assertthat::assert_that(
-    file.exists(team_info_path),
-    msg = paste0(
-      "Could not find ", team_info_path,
-      " - run this from the repo root (where the Data/ folder lives)"
-    )
-  )
-  nhl_teams <- readRDS(team_info_path)
+  nhl_teams <- load_team_info()
 
   if(!is.null(teams)){
     teams <- toupper(teams)

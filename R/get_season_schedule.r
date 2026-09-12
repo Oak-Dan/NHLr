@@ -12,7 +12,7 @@
 #' schedules).
 #'
 #' Standardized, English-only column names, with no team colors/logos
-#' baked in - join \code{Data/nhl_team_info.RDS} by \code{team_abbr} if you
+#' baked in - join \code{\link{load_team_info}()} by \code{team_abbr} if you
 #' need those.
 #'
 #' For a season that hasn't been played yet, \code{home_score}/\code{away_score}
@@ -57,15 +57,7 @@ get_season_schedule <- function(season, teams = NULL, cores = 2){
     msg = "`cores` must be a positive integer"
   )
 
-  team_info_path <- "Data/nhl_team_info.RDS"
-  assertthat::assert_that(
-    file.exists(team_info_path),
-    msg = paste0(
-      "Could not find ", team_info_path,
-      " - run this from the repo root (where the Data/ folder lives)"
-    )
-  )
-  nhl_teams <- readRDS(team_info_path)
+  nhl_teams <- load_team_info()
 
   if(!is.null(teams)){
     teams <- toupper(teams)

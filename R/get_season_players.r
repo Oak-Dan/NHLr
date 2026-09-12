@@ -11,6 +11,13 @@
 #' player's full bio and draft info), returning one row per player with
 #' standardized, English-only column names.
 #'
+#' A player's individual "landing" profile can lag behind a recent trade or
+#' signing - the NHL's roster endpoint already shows them on their new
+#' team, but their own profile still comes back with no current team at
+#' all (\code{team_id}/\code{team_abbr} both \code{NA}). When that happens,
+#' this function falls back to the team the player was found under in
+#' \code{\link{get_current_rosters}} instead of leaving it blank.
+#'
 #' This is slow the first time - one API call per player - but
 #' \code{\link{get_player_details}} is memoised, so re-building the same
 #' season again later in the session is instant.
@@ -60,6 +67,31 @@ get_season_players <- function(season = "current", teams = NULL, cores = 4){
   if(missing_n > 0){
     warning(paste(missing_n, "player(s) could not be fetched - see messages above"))
   }
+
+  # fall back to the roster's team info when a player's own landing page
+  # hasn't caught up to a recent trade/signing yet (team_id/team_abbr NA)
+  roster_teams <- roster |>
+    dplyr::select(player_id, roster_team_abbr = team_abbr, roster_team_id = team_id) |>
+    dplyr::distinct(player_id, .keep_all = TRUE)
+
+  players <- players |>
+    dplyr::left_join(roster_teams, by = "player_id") |>
+    dplyr::mutate(
+      used_roster_fallback = is.na(team_abbr) & !is.na(roster_team_abbr),
+      team_abbr = dplyr::coalesce(team_abbr, roster_team_abbr),
+      team_id = dplyr::coalesce(team_id, roster_team_id)
+    ) |>
+    dplyr::select(-roster_team_abbr, -roster_team_id)
+
+  n_fallback <- sum(players$used_roster_fallback, na.rm = TRUE)
+  if(n_fallback > 0){
+    message(paste0(
+      n_fallback, " player(s) had no current team on their own profile - ",
+      "used the roster's team instead."
+    ))
+  }
+
+  players <- players |> dplyr::select(-used_roster_fallback)
 
   players$season <- season
 

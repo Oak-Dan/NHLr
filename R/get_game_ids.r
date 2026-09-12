@@ -30,8 +30,7 @@ library(tidyverse)
 
 get_game_ids <- function(season = NULL, day = as.Date(Sys.Date(), "%Y-%m-%d")) {
   # load team abbreviations
-  path <- "Data/nhl_team_info.RDS"
-  team_info <- readRDS(path)
+  team_info <- load_team_info()
 
   if (is.null(season)) {
     # scrape day's games

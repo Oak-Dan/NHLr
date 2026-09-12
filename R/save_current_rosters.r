@@ -11,7 +11,7 @@
 #' \code{\link{get_current_rosters}} and saves them to
 #' \code{Data/nhl_rosters_{season_label}.RDS} — one file per season, so
 #' next year's pull won't overwrite this year's. Mirrors how
-#' \code{Data/nhl_team_info.RDS} is already used for team metadata: load
+#' the team table is already used for team metadata: load
 #' the saved file later with \code{readRDS()} instead of hitting the API
 #' again.
 #'
